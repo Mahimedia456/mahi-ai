@@ -1,0 +1,337 @@
+@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html {
+  scroll-behavior: smooth;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  @apply bg-mahi-bg text-mahi-text;
+  font-family: "Inter", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+@layer base {
+  * {
+    @apply border-mahi-outlineVariant/20;
+  }
+
+  ::selection {
+    background: rgba(83, 245, 231, 0.22);
+    color: #ffffff;
+  }
+}
+
+@layer components {
+  /* =========================
+     GLOBAL
+  ========================= */
+  .theme-shell {
+    @apply min-h-screen bg-mahi-bg text-mahi-text;
+  }
+
+  .theme-heading {
+    @apply tracking-tight text-mahi-textStrong;
+    font-family: "Space Grotesk", sans-serif;
+  }
+
+  .theme-body {
+    @apply text-mahi-textMuted;
+    font-family: "Inter", sans-serif;
+  }
+
+  .theme-link {
+    @apply transition-colors duration-200 hover:text-mahi-accent;
+  }
+
+  .theme-outline-card {
+    @apply border border-mahi-outlineVariant/30 bg-mahi-surfaceContainer;
+  }
+
+  .theme-glass-panel {
+    background: rgba(17, 17, 17, 0.55);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+  }
+
+  .theme-glass-monolith {
+    background: rgba(8, 8, 8, 0.72);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    border: 1px solid rgba(83, 245, 231, 0.12);
+  }
+
+  .theme-neon-border-top {
+    border-top: 1px solid #53f5e7;
+    box-shadow: 0 -4px 15px -6px rgba(83, 245, 231, 0.35);
+  }
+
+  .theme-auth-neon-top {
+    box-shadow: 0 -1px 0 0 #53f5e7, 0 0 15px rgba(83, 245, 231, 0.14);
+  }
+
+  .theme-glow-teal {
+    box-shadow: 0 0 34px rgba(83, 245, 231, 0.12);
+  }
+
+  .theme-icon-glow {
+    box-shadow: 0 0 18px rgba(83, 245, 231, 0.16);
+  }
+
+  .theme-btn-primary {
+    @apply inline-flex items-center justify-center rounded-full bg-mahi-accent px-5 py-3 font-bold text-mahi-accentText transition-all duration-300 hover:scale-[1.015];
+    font-family: "Plus Jakarta Sans", sans-serif;
+    box-shadow: 0 0 14px rgba(83, 245, 231, 0.26);
+  }
+
+  .theme-btn-primary:hover {
+    box-shadow: 0 0 22px rgba(83, 245, 231, 0.38);
+  }
+
+  .theme-btn-secondary {
+    @apply inline-flex items-center justify-center rounded-full border border-mahi-outlineVariant px-5 py-3 font-bold text-white transition-all duration-200 hover:bg-mahi-surfaceContainer;
+    font-family: "Plus Jakarta Sans", sans-serif;
+  }
+
+  .theme-pill {
+    @apply inline-flex items-center gap-2 rounded-full border border-mahi-outlineVariant/20 bg-mahi-surfaceHigh px-3 py-1;
+  }
+
+  .theme-input {
+    @apply w-full rounded-lg border border-white/5 bg-[#121212]/70 px-4 py-3.5 text-sm text-white outline-none transition-all placeholder:text-white/20 focus:border-mahi-accent/50 focus:ring-1 focus:ring-mahi-accent/40;
+  }
+
+  .theme-label {
+    @apply ml-0.5 text-[10px] font-bold uppercase tracking-[0.22em] text-mahi-textMuted2;
+    font-family: "Plus Jakarta Sans", sans-serif;
+  }
+
+  /* =========================
+     LANDING
+  ========================= */
+  .landing-page {
+    @apply bg-mahi-bg text-mahi-text;
+    font-family: "Inter", sans-serif;
+    background-image: radial-gradient(
+      circle at top left,
+      rgba(83, 245, 231, 0.08),
+      transparent 28%
+    );
+  }
+
+  .landing-nav {
+    @apply fixed top-0 z-50 w-full border-b border-mahi-accent/10 bg-[#131313]/80 backdrop-blur-xl;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.48);
+  }
+
+  .landing-card {
+    @apply rounded-xl border border-mahi-outlineVariant/10 bg-mahi-surfaceContainer transition-all duration-300 hover:-translate-y-2;
+  }
+
+  .landing-bento {
+    @apply relative overflow-hidden rounded-3xl border border-mahi-outlineVariant/10 bg-mahi-surfaceContainer;
+  }
+
+  /* =========================
+     AUTH
+  ========================= */
+  .auth-page {
+    @apply min-h-screen bg-mahi-bgPure text-white;
+    font-family: "Plus Jakarta Sans", sans-serif;
+    background-image: radial-gradient(
+      circle at 0% 50%,
+      rgba(83, 245, 231, 0.08) 0%,
+      transparent 40%
+    );
+  }
+
+  .auth-card {
+    @apply relative w-full max-w-[420px] overflow-hidden rounded-lg;
+    background: rgba(10, 10, 10, 0.62);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(83, 245, 231, 0.12);
+    box-shadow: 0 -1px 0 0 #53f5e7, 0 0 15px rgba(83, 245, 231, 0.14);
+  }
+
+  .auth-title {
+    @apply text-3xl font-bold tracking-tight text-white;
+    font-family: "Plus Jakarta Sans", sans-serif;
+  }
+
+  .auth-subtitle {
+    @apply text-center text-sm text-mahi-textMuted2 opacity-80;
+    font-family: "Plus Jakarta Sans", sans-serif;
+  }
+
+  .auth-footer-link {
+    @apply text-[10px] font-bold uppercase tracking-[0.2em] text-white/40 transition-all duration-200 hover:text-mahi-accent;
+    font-family: "Plus Jakarta Sans", sans-serif;
+  }
+
+  /* =========================
+     APP / DASHBOARD / STUDIO
+  ========================= */
+  .app-shell {
+    @apply min-h-screen bg-black text-white;
+    background-image: radial-gradient(circle at 50% 50%, #101010 0%, #000000 100%);
+  }
+
+  .app-grid-overlay {
+    background-image:
+      linear-gradient(rgba(83, 245, 231, 0.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(83, 245, 231, 0.05) 1px, transparent 1px);
+    background-size: 48px 48px;
+    opacity: 0.06;
+  }
+
+  .app-panel-line {
+    @apply border border-mahi-outlineVariant/30 bg-black/75;
+  }
+
+  .app-panel-soft {
+    @apply border border-mahi-outlineVariant/20 bg-black/40;
+  }
+
+  .app-mono {
+    font-family: "Space Grotesk", sans-serif;
+    letter-spacing: 0.08em;
+  }
+
+  .app-label {
+    @apply text-[10px] uppercase tracking-[0.28em] text-white/35;
+    font-family: "Space Grotesk", sans-serif;
+    font-weight: 600;
+  }
+
+  .app-nav-link {
+    @apply flex items-center gap-3 px-4 py-3 text-[12px] text-white/55 transition-all duration-200 hover:text-white;
+    font-family: "Space Grotesk", sans-serif;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    font-weight: 600;
+  }
+
+  .app-nav-link-active {
+    @apply text-mahi-accent;
+    background: rgba(83, 245, 231, 0.05);
+    box-shadow: inset -2px 0 0 #53f5e7;
+  }
+
+  .app-icon-box {
+    @apply flex h-10 w-10 items-center justify-center border border-mahi-outlineVariant/40 bg-black/60;
+  }
+
+  .app-metric-card {
+    @apply border border-mahi-outlineVariant/35 bg-black px-5 py-5;
+  }
+
+  .app-action-card {
+    @apply border border-mahi-outlineVariant/30 bg-black px-5 py-5 transition-all duration-200 hover:border-mahi-accent/55 hover:shadow-[0_0_16px_rgba(83,245,231,0.07)];
+  }
+
+  .app-terminal-line {
+    @apply text-[11px] leading-6 text-white/65;
+    font-family: "Space Grotesk", sans-serif;
+    letter-spacing: 0.03em;
+  }
+
+  .app-terminal-time {
+    @apply text-mahi-accent;
+    font-family: "Space Grotesk", sans-serif;
+  }
+
+  .app-top-link {
+    @apply hidden items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.2em] transition-colors md:flex;
+    font-family: "Space Grotesk", sans-serif;
+  }
+
+  .app-top-link-active {
+    @apply text-mahi-accent;
+  }
+
+  .app-top-link-idle {
+    @apply text-white/35 hover:text-white;
+  }
+
+  .app-sharp-button {
+    @apply inline-flex items-center justify-center border border-mahi-accent/60 bg-transparent px-4 py-2.5 text-[10px] font-semibold uppercase tracking-[0.24em] text-mahi-accent transition-all duration-200 hover:bg-mahi-accent/8;
+    font-family: "Space Grotesk", sans-serif;
+  }
+
+  .app-sharp-button-solid {
+    @apply inline-flex items-center justify-center bg-mahi-accent px-4 py-2.5 text-[10px] font-semibold uppercase tracking-[0.24em] text-black transition-all duration-200 hover:brightness-110;
+    font-family: "Space Grotesk", sans-serif;
+    box-shadow: 0 0 16px rgba(83, 245, 231, 0.16);
+  }
+
+  .app-section-title {
+    @apply text-white;
+    font-family: "Space Grotesk", sans-serif;
+    font-weight: 700;
+    letter-spacing: -0.04em;
+  }
+
+  .app-card-title {
+    @apply text-white;
+    font-family: "Space Grotesk", sans-serif;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+  }
+
+  .app-small-caps {
+    @apply text-[10px] uppercase text-white/35;
+    font-family: "Space Grotesk", sans-serif;
+    font-weight: 600;
+    letter-spacing: 0.24em;
+  }
+
+  .app-border-glow {
+    border: 1px solid rgba(83, 245, 231, 0.28);
+    box-shadow: 0 0 16px rgba(83, 245, 231, 0.08);
+  }
+
+  .app-grid-blueprint {
+    background-image: radial-gradient(circle, rgba(83, 245, 231, 0.14) 1px, transparent 1px);
+    background-size: 32px 32px;
+  }
+}
+
+/* =========================
+   SCROLLBAR / EFFECTS
+========================= */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(71, 71, 71, 0.8);
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(83, 245, 231, 0.45);
+}
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
