@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
-import LogsTabs from "../components/logs/LogsTabs.jsx";
-import LogsTable from "../components/logs/LogsTable.jsx";
+import AdminLogsTabs from "../components/adminlogs/AdminLogsTabs.jsx";
+import AdminLogsTable from "../components/adminlogs/AdminLogsTable.jsx";
 import {
   apiLogs,
   errorLogs,
@@ -109,9 +109,8 @@ export default function LogsPage() {
         <p className="mt-3 max-w-2xl text-sm leading-7 text-[#9eaaa7]">{subtitle}</p>
       </section>
 
-      <LogsTabs activeTab={activeTab} onChange={setActiveTab} />
-
-      <LogsTable columns={columns} rows={rows} />
+      <AdminLogsTabs activeTab={activeTab} onChange={setActiveTab} />
+      <AdminLogsTable columns={columns} rows={rows} />
     </div>
   );
 }
