@@ -1,13 +1,13 @@
 import { useMemo, useState } from "react";
-import LogsTabs from "../components/logs/LogsTabs";
-import LogsTable from "../components/logs/LogsTable";
+import LogsTabs from "../components/logs/LogsTabs.jsx";
+import LogsTable from "../components/logs/LogsTable.jsx";
 import {
   apiLogs,
   errorLogs,
   generationLogs,
   jobQueueLogs,
   moderationLogs,
-} from "../data/logsData";
+} from "../data/logsData.js";
 
 export default function LogsPage() {
   const [activeTab, setActiveTab] = useState("generation");

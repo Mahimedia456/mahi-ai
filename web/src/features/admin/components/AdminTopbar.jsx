@@ -2,6 +2,7 @@ import { NavLink } from "react-router-dom";
 import { Bell, Search, Settings } from "lucide-react";
 
 const topNavItems = [
+  { label: "Models", to: "/admin/models" },
   { label: "Analytics", to: "/admin/analytics" },
   { label: "Logs", to: "/admin/logs" },
 ];

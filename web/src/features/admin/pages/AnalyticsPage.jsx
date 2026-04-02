@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
-import AnalyticsTabs from "../components/analytics/AnalyticsTabs";
-import AnalyticsStatCard from "../components/analytics/AnalyticsStatCard";
+import AnalyticsTabs from "../components/analytics/AnalyticsTabs.jsx";
+import AnalyticsStatCard from "../components/analytics/AnalyticsStatCard.jsx";
 import {
   activeUsersStats,
   imageStats,
@@ -9,8 +9,7 @@ import {
   revenueChart,
   revenueStats,
   videoStats,
-} from "../data/analyticsData";
-
+} from "../data/analyticsData.js";
 function ChartCard({ title, subtitle, bars, labelsKey = "day" }) {
   const max = useMemo(() => Math.max(...bars.map((item) => item.value)), [bars]);
 
