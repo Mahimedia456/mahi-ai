@@ -1,58 +1,26 @@
-import { NavLink, Outlet } from "react-router-dom";
-import {
-  Shield,
-  Users,
-  BadgeDollarSign,
-  CreditCard,
-  BarChart3,
-  Cpu,
-  ScrollText,
-} from "lucide-react";
-
-const adminItems = [
-  { label: "Dashboard", path: "/admin", icon: Shield, end: true },
-  { label: "Users", path: "/admin/users", icon: Users },
-  { label: "Plans", path: "/admin/plans", icon: BadgeDollarSign },
-  { label: "Subscriptions", path: "/admin/subscriptions", icon: CreditCard },
-  { label: "Usage", path: "/admin/usage", icon: BarChart3 },
-  { label: "Models", path: "/admin/models", icon: Cpu },
-  { label: "Logs", path: "/admin/logs", icon: ScrollText },
-];
+import { Outlet } from "react-router-dom";
+import AdminSidebar from "../features/admin/components/AdminSidebar";
+import AdminTopbar from "../features/admin/components/AdminTopbar";
 
 export default function AdminLayout() {
   return (
-    <div className="flex min-h-screen bg-mahi-bg text-mahi-text">
-      <aside className="w-72 shrink-0 border-r border-mahi-border bg-black/70 p-6">
-        <h1 className="mb-8 text-3xl font-bold">Mahi AI Admin</h1>
+    <div className="min-h-screen bg-[#0f0f0f] text-white">
+      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+        <div className="absolute -left-24 bottom-0 h-[360px] w-[360px] rounded-full bg-[#53f5e7]/[0.04] blur-[120px]" />
+        <div className="absolute right-0 top-0 h-[260px] w-[260px] rounded-full bg-[#53f5e7]/[0.03] blur-[120px]" />
+      </div>
 
-        <nav className="space-y-2">
-          {adminItems.map(({ label, path, icon: Icon, end }) => (
-            <NavLink
-              key={path}
-              to={path}
-              end={end}
-              className={({ isActive }) =>
-                isActive ? "sidebar-link sidebar-link-active" : "sidebar-link"
-              }
-            >
-              <Icon size={20} />
-              <span>{label}</span>
-            </NavLink>
-          ))}
-        </nav>
-      </aside>
+      <div className="relative flex min-h-screen">
+        <AdminSidebar />
 
-      <div className="flex flex-1 flex-col">
-        <header className="flex h-20 items-center justify-between border-b border-mahi-border bg-black/40 px-8">
-          <h2 className="text-xl font-semibold">Admin Control Panel</h2>
-          <div className="rounded-full border border-mahi-border px-4 py-2 text-sm text-mahi-accent">
-            System Secure
-          </div>
-        </header>
-
-        <main className="flex-1 p-8">
-          <Outlet />
-        </main>
+        <div className="min-w-0 flex-1 lg:ml-[250px]">
+          <AdminTopbar />
+          <main className="px-5 pb-8 pt-6 sm:px-6 lg:px-8">
+            <div className="mx-auto max-w-[1400px]">
+              <Outlet />
+            </div>
+          </main>
+        </div>
       </div>
     </div>
   );

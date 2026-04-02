@@ -3,6 +3,22 @@ import PublicLayout from "../../layouts/PublicLayout";
 import AuthLayout from "../../layouts/AuthLayout";
 import UserLayout from "../../layouts/UserLayout";
 import AdminLayout from "../../layouts/AdminLayout";
+import UsersPage from "../../features/admin/pages/UsersPage";
+import SuspendedUsersPage from "../../features/admin/pages/SuspendedUsersPage";
+import UserActivityPage from "../../features/admin/pages/UserActivityPage";
+import UserDetailsPage from "../../features/admin/pages/UserDetailsPage";
+
+import ContentImagesPage from "../../features/admin/pages/ContentImagesPage";
+import ContentVideosPage from "../../features/admin/pages/ContentVideosPage";
+import ReportedContentPage from "../../features/admin/pages/ReportedContentPage";
+import ContentDetailsPage from "../../features/admin/pages/ContentDetailsPage";
+
+import StorageUsagePage from "../../features/admin/pages/StorageUsagePage";
+import MediaBucketsPage from "../../features/admin/pages/MediaBucketsPage";
+import BucketDetailsPage from "../../features/admin/pages/BucketDetailsPage";
+
+import AnalyticsPage from "../../features/admin/pages/AnalyticsPage";
+import LogsPage from "../../features/admin/pages/LogsPage";
 
 import LandingPage from "../../features/landing/pages/LandingPage";
 import Login from "../../features/auth/pages/Login";
@@ -14,6 +30,16 @@ import ResetPassword from "../../features/auth/pages/ResetPassword";
 import DashboardHome from "../../features/dashboard/pages/DashboardHome";
 import AdminDashboard from "../../features/admin/pages/AdminDashboard";
 import ChatPage from "../../features/chat/pages/ChatPage";
+
+import PlansPage from "../../features/admin/pages/PlansPage";
+import TransactionsPage from "../../features/admin/pages/TransactionsPage";
+import RefundsPage from "../../features/admin/pages/RefundsPage";
+import PlanDetailsPage from "../../features/admin/pages/PlanDetailsPage";
+
+import AdminSettingsPage from "../../features/admin/pages/AdminSettingsPage";
+import ModelsPage from "../../features/admin/pages/ModelsPage";
+import ModelAnalyticsPage from "../../features/admin/pages/ModelAnalyticsPage";
+import ModelDetailsPage from "../../features/admin/pages/ModelDetailsPage";
 
 import ImageStudioLayout from "../../features/imageStudio/layouts/ImageStudioLayout";
 import ImageStudioHome from "../../features/imageStudio/pages/ImageStudioHome";
@@ -51,17 +77,15 @@ import NotificationsPage from "../../features/notifications/pages/NotificationsP
 function Placeholder({ title }) {
   return (
     <div className="mx-auto max-w-7xl px-4 py-10 md:px-6 md:py-12">
-      <div className="border border-mahi-outlineVariant/30 bg-black/50 px-8 py-12">
-        <h2 className="theme-heading text-4xl font-bold uppercase tracking-[-0.05em] text-white">
-          {title}
-        </h2>
-        <p className="mt-3 text-white/40">Module screen coming next.</p>
+      <div className="rounded-[28px] border border-mahi-outlineVariant/30 bg-black/40 px-8 py-12 backdrop-blur-xl">
+        <h2 className="text-3xl font-bold tracking-tight text-white">{title}</h2>
+        <p className="mt-2 text-sm text-white/45">Module screen coming next.</p>
       </div>
     </div>
   );
 }
 
-function isAuthenticated() {
+function isUserAuthenticated() {
   return localStorage.getItem("mahi_auth_token") === "true";
 }
 
@@ -70,7 +94,7 @@ function isAdminAuthenticated() {
 }
 
 function ProtectedUserRoute({ children }) {
-  if (!isAuthenticated()) {
+  if (!isUserAuthenticated()) {
     return <Navigate to="/login" replace />;
   }
   return children;
@@ -84,12 +108,12 @@ function ProtectedAdminRoute({ children }) {
 }
 
 function AuthRedirectRoute({ children }) {
-  if (isAuthenticated()) {
-    return <Navigate to="/app" replace />;
-  }
-
   if (isAdminAuthenticated()) {
     return <Navigate to="/admin" replace />;
+  }
+
+  if (isUserAuthenticated()) {
+    return <Navigate to="/app" replace />;
   }
 
   return children;
@@ -178,6 +202,28 @@ export default function AppRouter() {
         }
       >
         <Route index element={<AdminDashboard />} />
+        <Route path="dashboard" element={<AdminDashboard />} />
+        <Route path="users" element={<UsersPage />} />
+<Route path="users/suspended" element={<SuspendedUsersPage />} />
+<Route path="users/activity" element={<UserActivityPage />} />
+<Route path="users/:userId" element={<UserDetailsPage />} />
+<Route path="subscriptions/plans" element={<PlansPage />} />
+<Route path="subscriptions/plans/:planId" element={<PlanDetailsPage />} />
+<Route path="subscriptions/transactions" element={<TransactionsPage />} />
+<Route path="subscriptions/refunds" element={<RefundsPage />} />
+  <Route path="content/images" element={<ContentImagesPage />} />
+<Route path="content/videos" element={<ContentVideosPage />} />
+<Route path="content/reported" element={<ReportedContentPage />} />
+<Route path="content/:contentId" element={<ContentDetailsPage />} />
+<Route path="storage/usage" element={<StorageUsagePage />} />
+<Route path="storage/buckets" element={<MediaBucketsPage />} />
+<Route path="storage/buckets/:bucketId" element={<BucketDetailsPage />} />
+<Route path="models" element={<ModelsPage />} />
+<Route path="models/analytics" element={<ModelAnalyticsPage />} />
+<Route path="models/:modelId" element={<ModelDetailsPage />} />
+       <Route path="analytics" element={<AnalyticsPage />} />
+<Route path="logs" element={<LogsPage />} />
+        <Route path="settings" element={<AdminSettingsPage />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />
