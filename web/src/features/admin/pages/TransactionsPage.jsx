@@ -1,37 +1,55 @@
-import SubscriptionStatCard from "../components/subscriptions/SubscriptionStatCard";
-import TransactionsTable from "../components/subscriptions/TransactionsTable";
-import { transactions } from "../data/subscriptionsData";
+import { useEffect, useState } from "react";
+import { adminApi } from "../../../api/adminApi";
 
 export default function TransactionsPage() {
-  const totalVolume = transactions
-    .filter((item) => item.status === "Paid")
-    .reduce((sum, item) => sum + Number(item.amount.replace("$", "")), 0);
+  const [transactions, setTransactions] = useState([]);
+
+  useEffect(() => {
+    async function load() {
+      try {
+        const res = await adminApi.getTransactions();
+        setTransactions(res.data.data.transactions || []);
+      } catch (error) {
+        console.error(error);
+      }
+    }
+    load();
+  }, []);
 
   return (
     <div className="space-y-8">
       <section className="rounded-[30px] border border-[#53f5e7]/10 bg-[#1b1b1b]/75 p-7 backdrop-blur-xl">
-        <p className="text-[12px] font-bold uppercase tracking-[0.28em] text-[#53f5e7]/80">
-          Subscription Management
-        </p>
-        <h1
-          className="mt-3 text-[34px] font-extrabold tracking-[-0.04em] text-white"
-          style={{ fontFamily: '"Plus Jakarta Sans", sans-serif' }}
-        >
+        <h1 className="text-[34px] font-extrabold tracking-[-0.04em] text-white" style={{ fontFamily: '"Plus Jakarta Sans", sans-serif' }}>
           Transactions
         </h1>
-        <p className="mt-3 max-w-2xl text-sm leading-7 text-[#9eaaa7]">
-          Inspect payment records, invoice state, and billing channel performance.
-        </p>
       </section>
 
-      <section className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-4">
-        <SubscriptionStatCard title="Total Transactions" value={transactions.length} hint="Current billing records" />
-        <SubscriptionStatCard title="Paid" value={transactions.filter((i) => i.status === "Paid").length} hint="Successful renewals and purchases" />
-        <SubscriptionStatCard title="Failed" value={transactions.filter((i) => i.status === "Failed").length} hint="Requires billing follow-up" />
-        <SubscriptionStatCard title="Volume" value={`$${totalVolume.toFixed(2)}`} hint="Paid billing volume in dataset" />
-      </section>
-
-      <TransactionsTable data={transactions} />
+      <div className="rounded-[28px] border border-[#53f5e7]/10 bg-[#1b1b1b]/75 p-5 backdrop-blur-xl overflow-x-auto">
+        <table className="min-w-full text-sm text-white">
+          <thead>
+            <tr className="text-left text-[#93a19e]">
+              <th className="py-3">User</th>
+              <th className="py-3">Email</th>
+              <th className="py-3">Amount</th>
+              <th className="py-3">Method</th>
+              <th className="py-3">Reference</th>
+              <th className="py-3">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {transactions.map((item) => (
+              <tr key={item.id} className="border-t border-white/5">
+                <td className="py-3">{item.user_name}</td>
+                <td className="py-3">{item.email}</td>
+                <td className="py-3">{item.amount} {item.currency}</td>
+                <td className="py-3">{item.payment_method || "-"}</td>
+                <td className="py-3">{item.provider_reference || "-"}</td>
+                <td className="py-3">{item.status}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

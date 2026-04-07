@@ -1,7 +1,7 @@
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import UserDetailTabs from "../components/users/UserDetailTabs";
-import { users } from "../data/usersData";
+import { adminApi } from "../../../api/adminApi";
 
 function Panel({ title, subtitle, children }) {
   return (
@@ -22,7 +22,7 @@ function DataRow({ label, value }) {
   return (
     <div className="flex items-center justify-between gap-4 border-b border-white/5 py-3 last:border-b-0">
       <span className="text-sm text-[#93a19e]">{label}</span>
-      <span className="text-sm font-medium text-white">{value}</span>
+      <span className="text-sm font-medium text-white">{value || "-"}</span>
     </div>
   );
 }
@@ -30,8 +30,23 @@ function DataRow({ label, value }) {
 export default function UserDetailsPage() {
   const { userId } = useParams();
   const [activeTab, setActiveTab] = useState("profile");
+  const [user, setUser] = useState(null);
+  const [subscription, setSubscription] = useState(null);
+  const [billingHistory, setBillingHistory] = useState([]);
 
-  const user = useMemo(() => users.find((item) => item.id === userId), [userId]);
+  useEffect(() => {
+    async function load() {
+      try {
+        const res = await adminApi.getUserById(userId);
+        setUser(res.data.data.user);
+        setSubscription(res.data.data.subscription);
+        setBillingHistory(res.data.data.billingHistory || []);
+      } catch (error) {
+        console.error(error);
+      }
+    }
+    load();
+  }, [userId]);
 
   if (!user) {
     return (
@@ -56,17 +71,8 @@ export default function UserDetailsPage() {
               {user.name}
             </h1>
             <p className="mt-2 text-sm text-[#9eaaa7]">
-              {user.email} · {user.plan} · {user.status}
+              {user.email} · {subscription?.plan_name || "No Plan"} · {user.status}
             </p>
-          </div>
-
-          <div className="flex gap-3">
-            <button className="rounded-2xl border border-white/10 bg-white/[0.04] px-5 py-3 text-sm font-semibold text-white">
-              Suspend User
-            </button>
-            <button className="rounded-2xl bg-[#53f5e7] px-5 py-3 text-sm font-bold text-black">
-              Edit User
-            </button>
           </div>
         </div>
       </section>
@@ -79,14 +85,15 @@ export default function UserDetailsPage() {
             <DataRow label="Full Name" value={user.name} />
             <DataRow label="Email Address" value={user.email} />
             <DataRow label="Country" value={user.country} />
+            <DataRow label="Date of Birth" value={user.date_of_birth} />
             <DataRow label="Role" value={user.role} />
             <DataRow label="Status" value={user.status} />
-            <DataRow label="Joined" value={user.joinedAt} />
-            <DataRow label="Last Active" value={user.lastActive} />
+            <DataRow label="Joined" value={new Date(user.created_at).toLocaleString()} />
+            <DataRow label="Last Active" value={user.last_login_at ? new Date(user.last_login_at).toLocaleString() : "-"} />
           </Panel>
 
           <Panel title="Admin Notes" subtitle="Internal reference for support and moderation.">
-            <p className="text-sm leading-7 text-[#c8d1cf]">{user.notes}</p>
+            <p className="text-sm leading-7 text-[#c8d1cf]">{user.notes || "No notes available."}</p>
           </Panel>
         </div>
       )}
@@ -94,94 +101,45 @@ export default function UserDetailsPage() {
       {activeTab === "subscription" && (
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
           <Panel title="Current Plan">
-            <DataRow label="Plan Name" value={user.plan} />
-            <DataRow label="Total Billing" value={user.billingTotal} />
-            <DataRow label="Credits Total" value={user.creditsTotal} />
+            <DataRow label="Plan Name" value={subscription?.plan_name} />
+            <DataRow label="Billing Cycle" value={subscription?.billing_cycle} />
+            <DataRow label="Status" value={subscription?.status} />
           </Panel>
 
           <Panel title="Usage Allocation">
-            <DataRow label="Credits Used" value={user.creditsUsed} />
-            <DataRow label="Remaining Credits" value={user.creditsTotal - user.creditsUsed} />
-            <DataRow label="Storage Used" value={user.storageUsed} />
+            <DataRow label="Chat Credits" value={user.chat_credits_remaining} />
+            <DataRow label="Image Credits" value={user.image_credits_remaining} />
+            <DataRow label="Video Credits" value={user.video_credits_remaining} />
           </Panel>
 
-          <Panel title="Subscription Actions">
-            <div className="space-y-3">
-              <button className="w-full rounded-2xl bg-[#53f5e7] px-4 py-3 text-sm font-bold text-black">
-                Upgrade Plan
-              </button>
-              <button className="w-full rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm font-semibold text-white">
-                Pause Subscription
-              </button>
-            </div>
+          <Panel title="Storage">
+            <DataRow label="Storage Used (MB)" value={user.storage_used_mb} />
           </Panel>
         </div>
-      )}
-
-      {activeTab === "usage" && (
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-4">
-          <Panel title="Images Generated">
-            <p className="text-[32px] font-extrabold tracking-[-0.03em] text-white">{user.imagesGenerated}</p>
-          </Panel>
-
-          <Panel title="Videos Generated">
-            <p className="text-[32px] font-extrabold tracking-[-0.03em] text-white">{user.videosGenerated}</p>
-          </Panel>
-
-          <Panel title="Credits Used">
-            <p className="text-[32px] font-extrabold tracking-[-0.03em] text-white">
-              {user.creditsUsed}/{user.creditsTotal}
-            </p>
-          </Panel>
-
-          <Panel title="Storage Used">
-            <p className="text-[32px] font-extrabold tracking-[-0.03em] text-white">{user.storageUsed}</p>
-          </Panel>
-        </div>
-      )}
-
-      {activeTab === "content" && (
-        <Panel title="Generated Content" subtitle="Most recent generated assets by this user.">
-          <div className="space-y-3">
-            {user.generatedItems.map((item) => (
-              <div
-                key={item.id}
-                className="flex flex-col gap-3 rounded-2xl border border-white/5 bg-[#151515] p-4 md:flex-row md:items-center md:justify-between"
-              >
-                <div>
-                  <p className="text-sm font-semibold text-white">{item.title}</p>
-                  <p className="mt-1 text-xs text-[#92a09d]">
-                    {item.type} · {item.date}
-                  </p>
-                </div>
-
-                <button className="rounded-xl bg-[#53f5e7]/10 px-4 py-2 text-xs font-semibold text-[#53f5e7]">
-                  View Asset
-                </button>
-              </div>
-            ))}
-          </div>
-        </Panel>
       )}
 
       {activeTab === "billing" && (
         <Panel title="Billing History" subtitle="Invoices and transaction history.">
           <div className="space-y-3">
-            {user.billingHistory.length === 0 ? (
+            {billingHistory.length === 0 ? (
               <p className="text-sm text-[#93a19e]">No billing history available.</p>
             ) : (
-              user.billingHistory.map((item) => (
+              billingHistory.map((item) => (
                 <div
                   key={item.id}
                   className="flex flex-col gap-3 rounded-2xl border border-white/5 bg-[#151515] p-4 md:flex-row md:items-center md:justify-between"
                 >
                   <div>
-                    <p className="text-sm font-semibold text-white">{item.invoice}</p>
-                    <p className="mt-1 text-xs text-[#92a09d]">{item.date}</p>
+                    <p className="text-sm font-semibold text-white">{item.provider_reference || item.id}</p>
+                    <p className="mt-1 text-xs text-[#92a09d]">
+                      {new Date(item.created_at).toLocaleString()}
+                    </p>
                   </div>
 
                   <div className="flex items-center gap-3">
-                    <span className="text-sm font-semibold text-white">{item.amount}</span>
+                    <span className="text-sm font-semibold text-white">
+                      {item.amount} {item.currency}
+                    </span>
                     <span className="rounded-full bg-[#53f5e7]/10 px-3 py-1 text-[11px] font-semibold text-[#53f5e7]">
                       {item.status}
                     </span>

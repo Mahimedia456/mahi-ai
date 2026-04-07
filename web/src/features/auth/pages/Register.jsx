@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import AuthCard from "../components/AuthCard";
+import { authApi } from "../../../api/authApi";
 
 export default function Register() {
   const navigate = useNavigate();
@@ -10,43 +11,58 @@ export default function Register() {
     email: "",
     password: "",
     confirmPassword: "",
-    agree: false,
+    agree: false
   });
 
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   function handleChange(e) {
     const { name, value, type, checked } = e.target;
     setForm((prev) => ({
       ...prev,
-      [name]: type === "checkbox" ? checked : value,
+      [name]: type === "checkbox" ? checked : value
     }));
+    setError("");
   }
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
 
     if (form.password !== form.confirmPassword) {
-      alert("Passwords do not match.");
+      setError("Passwords do not match.");
       return;
     }
 
     if (!form.agree) {
-      alert("Please accept Terms and Privacy Policy.");
+      setError("Please accept Terms and Privacy Policy.");
       return;
     }
 
-    localStorage.setItem("mahi_auth_token", "true");
-    localStorage.setItem(
-      "mahi_user",
-      JSON.stringify({
-        fullName: form.fullName,
-        email: form.email,
-      })
-    );
+    try {
+      setLoading(true);
 
-    navigate("/app", { replace: true });
+      const res = await authApi.register({
+        fullName: form.fullName.trim(),
+        email: form.email.trim().toLowerCase(),
+        password: form.password
+      });
+
+      localStorage.setItem("mahi_verify_email", form.email.trim().toLowerCase());
+      localStorage.setItem("mahi_verify_type", "register");
+
+      if (res?.data?.data?.otpPreview) {
+        localStorage.setItem("mahi_debug_otp", res.data.data.otpPreview);
+      }
+
+      navigate("/verify-otp", { replace: true });
+    } catch (err) {
+      setError(err?.response?.data?.message || "Registration failed");
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -148,27 +164,28 @@ export default function Register() {
           />
           <span>
             I agree to the{" "}
-            <a
-              href="#"
-              className="font-bold text-white transition-colors hover:text-mahi-accent"
-            >
+            <a href="#" className="font-bold text-white transition-colors hover:text-mahi-accent">
               Terms
             </a>{" "}
             and{" "}
-            <a
-              href="#"
-              className="font-bold text-white transition-colors hover:text-mahi-accent"
-            >
+            <a href="#" className="font-bold text-white transition-colors hover:text-mahi-accent">
               Privacy Policy
             </a>
           </span>
         </label>
 
+        {error ? (
+          <div className="rounded-[16px] border border-red-500/20 bg-red-500/10 px-4 py-3 text-[12px] font-medium text-red-300">
+            {error}
+          </div>
+        ) : null}
+
         <button
           type="submit"
-          className="theme-btn-primary w-full py-4 text-sm font-extrabold uppercase tracking-widest"
+          disabled={loading}
+          className="theme-btn-primary w-full py-4 text-sm font-extrabold uppercase tracking-widest disabled:opacity-60"
         >
-          Create Account
+          {loading ? "Creating Account..." : "Create Account"}
         </button>
       </form>
     </AuthCard>

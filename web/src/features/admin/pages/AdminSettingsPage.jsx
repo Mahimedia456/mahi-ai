@@ -27,7 +27,7 @@ export default function AdminSettingsPage() {
           Platform Settings
         </h1>
 
-        <p className="mt-3 text-sm text-[#97a3a0] max-w-xl">
+        <p className="mt-3 max-w-xl text-sm text-[#97a3a0]">
           Configure platform behavior, moderation policies, AI limits,
           notification rules, and administrative roles.
         </p>

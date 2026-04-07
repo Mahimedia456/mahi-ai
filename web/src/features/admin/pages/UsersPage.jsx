@@ -1,10 +1,14 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import UsersStatCard from "../components/users/UsersStatCard";
 import UsersTable from "../components/users/UsersTable";
-import { users } from "../data/usersData";
+import { adminApi } from "../../../api/adminApi";
 
 export default function UsersPage() {
+  const navigate = useNavigate();
   const [search, setSearch] = useState("");
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   const filteredUsers = useMemo(() => {
     const value = search.trim().toLowerCase();
@@ -12,37 +16,119 @@ export default function UsersPage() {
 
     return users.filter(
       (user) =>
-        user.name.toLowerCase().includes(value) ||
-        user.email.toLowerCase().includes(value) ||
-        user.plan.toLowerCase().includes(value)
+        String(user.name || "").toLowerCase().includes(value) ||
+        String(user.email || "").toLowerCase().includes(value) ||
+        String(user.plan || "").toLowerCase().includes(value) ||
+        String(user.country || "").toLowerCase().includes(value)
     );
-  }, [search]);
+  }, [search, users]);
 
   const activeUsers = users.filter((u) => u.status === "active").length;
   const suspendedUsers = users.filter((u) => u.status === "suspended").length;
+  const proEnterpriseUsers = users.filter((u) =>
+    ["pro", "enterprise"].includes(String(u.plan || "").toLowerCase())
+  ).length;
+
+  async function loadUsers() {
+    try {
+      setLoading(true);
+      const res = await adminApi.getUsers();
+      setUsers(res.data.data.users || []);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    loadUsers();
+  }, []);
+
+  async function handleDelete(user) {
+    const ok = window.confirm(`Delete ${user.name}?`);
+    if (!ok) return;
+
+    try {
+      await adminApi.deleteUser(user.id);
+      await loadUsers();
+    } catch (error) {
+      alert(error?.response?.data?.message || "Delete failed");
+    }
+  }
+
+  async function handleToggleStatus(user) {
+    try {
+      await adminApi.updateUser(user.id, {
+        status: user.status === "active" ? "suspended" : "active"
+      });
+      await loadUsers();
+    } catch (error) {
+      alert(error?.response?.data?.message || "Status update failed");
+    }
+  }
+
+  function handleEdit(user) {
+    navigate(`/admin/users/${user.id}/edit`);
+  }
+
+  function handleAddNew() {
+    navigate("/admin/users/new");
+  }
 
   return (
     <div className="space-y-8">
       <section className="rounded-[30px] border border-[#53f5e7]/10 bg-[#1b1b1b]/75 p-7 backdrop-blur-xl">
-        <p className="text-[12px] font-bold uppercase tracking-[0.28em] text-[#53f5e7]/80">
-          User Management
-        </p>
-        <h1
-          className="mt-3 text-[34px] font-extrabold tracking-[-0.04em] text-white"
-          style={{ fontFamily: '"Plus Jakarta Sans", sans-serif' }}
-        >
-          All Users
-        </h1>
-        <p className="mt-3 max-w-2xl text-sm leading-7 text-[#9eaaa7]">
-          Monitor account status, plan usage, engagement, and access state for all Mahi AI users.
-        </p>
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <p className="text-[12px] font-bold uppercase tracking-[0.28em] text-[#53f5e7]/80">
+              User Management
+            </p>
+            <h1
+              className="mt-3 text-[34px] font-extrabold tracking-[-0.04em] text-white"
+              style={{ fontFamily: '"Plus Jakarta Sans", sans-serif' }}
+            >
+              All Users
+            </h1>
+            <p className="mt-3 max-w-2xl text-sm leading-7 text-[#9eaaa7]">
+              Monitor account status, plan usage, engagement, personal details, and access state for all Mahi AI users.
+            </p>
+          </div>
+
+          <button
+            onClick={handleAddNew}
+            className="rounded-[20px] bg-[#53f5e7] px-5 py-3 text-sm font-bold text-black transition hover:scale-[1.02]"
+          >
+            Add New User
+          </button>
+        </div>
       </section>
 
       <section className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-4">
-        <UsersStatCard title="Total Users" value={users.length} hint="All registered accounts" />
-        <UsersStatCard title="Active Users" value={activeUsers} hint="Healthy active accounts" />
-        <UsersStatCard title="Suspended Users" value={suspendedUsers} hint="Restricted accounts" />
-        <UsersStatCard title="Pro & Enterprise" value={2} hint="High-value subscriptions" />
+        <UsersStatCard
+          title="Total Users"
+          value={users.length}
+          hint="All registered accounts"
+          accent="cyan"
+        />
+        <UsersStatCard
+          title="Active Users"
+          value={activeUsers}
+          hint="Healthy active accounts"
+          accent="green"
+        />
+        <UsersStatCard
+          title="Suspended Users"
+          value={suspendedUsers}
+          hint="Restricted accounts"
+          accent="red"
+        />
+        <UsersStatCard
+          title="Pro & Enterprise"
+          value={proEnterpriseUsers}
+          hint="High-value subscriptions"
+          accent="purple"
+        />
       </section>
 
       <section className="rounded-[28px] border border-[#53f5e7]/10 bg-[#1b1b1b]/75 p-5 backdrop-blur-xl">
@@ -69,7 +155,18 @@ export default function UsersPage() {
         </div>
 
         <div className="mt-5">
-          <UsersTable data={filteredUsers} />
+          {loading ? (
+            <div className="py-10 text-center text-sm text-[#8f9a97]">
+              Loading users...
+            </div>
+          ) : (
+            <UsersTable
+              data={filteredUsers}
+              onEdit={handleEdit}
+              onDelete={handleDelete}
+              onToggleStatus={handleToggleStatus}
+            />
+          )}
         </div>
       </section>
     </div>

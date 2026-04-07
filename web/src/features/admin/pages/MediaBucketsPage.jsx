@@ -1,9 +1,82 @@
+import { useEffect, useState } from "react";
 import StorageStatCard from "../components/storage/StorageStatCard";
 import MediaBucketsTable from "../components/storage/MediaBucketsTable";
-import { mediaBuckets } from "../data/storageData";
+import {
+  activateMediaBucket,
+  deactivateMediaBucket,
+  deleteMediaBucket,
+  fetchMediaBuckets,
+} from "../../../api/adminStorageApi";
 
 export default function MediaBucketsPage() {
-  const warningBuckets = mediaBuckets.filter((bucket) => bucket.status === "warning").length;
+  const [items, setItems] = useState([]);
+  const [actionLoadingId, setActionLoadingId] = useState("");
+  const [loading, setLoading] = useState(true);
+
+  async function loadData() {
+    try {
+      setLoading(true);
+      const res = await fetchMediaBuckets();
+      setItems(res.items || []);
+    } catch (error) {
+      console.error(error);
+      alert(error.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  async function handleDeactivate(bucket) {
+    try {
+      setActionLoadingId(bucket.id);
+      await deactivateMediaBucket(bucket.id);
+      await loadData();
+    } catch (error) {
+      console.error(error);
+      alert(error.message);
+    } finally {
+      setActionLoadingId("");
+    }
+  }
+
+  async function handleActivate(bucket) {
+    try {
+      setActionLoadingId(bucket.id);
+      await activateMediaBucket(bucket.id);
+      await loadData();
+    } catch (error) {
+      console.error(error);
+      alert(error.message);
+    } finally {
+      setActionLoadingId("");
+    }
+  }
+
+  async function handleDelete(bucket) {
+    const ok = window.confirm(`Remove bucket "${bucket.name}"? Bucket must be empty first.`);
+    if (!ok) return;
+
+    try {
+      setActionLoadingId(bucket.id);
+      await deleteMediaBucket(bucket.id);
+      await loadData();
+    } catch (error) {
+      console.error(error);
+      alert(error.message);
+    } finally {
+      setActionLoadingId("");
+    }
+  }
+
+  if (loading) {
+    return <div className="text-sm text-white">Loading buckets...</div>;
+  }
+
+  const warningBuckets = items.filter((bucket) => bucket.status === "warning").length;
 
   return (
     <div className="space-y-8">
@@ -23,12 +96,18 @@ export default function MediaBucketsPage() {
       </section>
 
       <section className="grid grid-cols-1 gap-5 md:grid-cols-3">
-        <StorageStatCard title="Total Buckets" value={mediaBuckets.length} hint="Configured storage buckets" />
-        <StorageStatCard title="Healthy" value={mediaBuckets.filter((b) => b.status === "healthy").length} hint="Operating normally" />
+        <StorageStatCard title="Total Buckets" value={items.length} hint="Configured storage buckets" />
+        <StorageStatCard title="Healthy" value={items.filter((b) => b.status === "healthy").length} hint="Operating normally" />
         <StorageStatCard title="Warnings" value={warningBuckets} hint="Needs admin review" />
       </section>
 
-      <MediaBucketsTable data={mediaBuckets} />
+      <MediaBucketsTable
+        data={items}
+        onDeactivate={handleDeactivate}
+        onActivate={handleActivate}
+        onDelete={handleDelete}
+        actionLoadingId={actionLoadingId}
+      />
     </div>
   );
 }

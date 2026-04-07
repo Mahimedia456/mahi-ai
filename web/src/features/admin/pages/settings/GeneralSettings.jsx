@@ -4,14 +4,13 @@ export default function GeneralSettings() {
       <h3 className="text-lg font-bold text-white">General Settings</h3>
 
       <div className="mt-6 grid gap-6 md:grid-cols-2">
-        <input className="theme-input" placeholder="Platform Name" />
-
-        <input className="theme-input" placeholder="Support Email" />
-
-        <input className="theme-input" placeholder="Default Language" />
-
-        <input className="theme-input" placeholder="Timezone" />
+        <input className="theme-input" placeholder="Platform Name" defaultValue="Mahi AI" />
+        <input className="theme-input" placeholder="Support Email" defaultValue="support@mahi.ai" />
+        <input className="theme-input" placeholder="Default Timezone" defaultValue="UTC" />
+        <input className="theme-input" placeholder="Brand Accent" defaultValue="#53f5e7" />
       </div>
+
+      <button className="theme-btn-primary mt-6">Save Changes</button>
     </div>
   );
 }

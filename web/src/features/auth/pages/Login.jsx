@@ -1,19 +1,21 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import AuthCard from "../components/AuthCard";
+import { useAuthStore } from "../../../store/authStore";
 
 const ADMIN_EMAIL = "admin@mahimediasolutions.com";
-const ADMIN_PASSWORD = "123123123";
+const ADMIN_PASSWORD = "Admin@123456";
 
 const USER_EMAIL = "user@mahimediasolutions.com";
-const USER_PASSWORD = "123123123";
+const USER_PASSWORD = "User@123456";
 
 export default function Login() {
   const navigate = useNavigate();
+  const { login, loading } = useAuthStore();
 
   const [form, setForm] = useState({
     email: "",
-    password: "",
+    password: ""
   });
 
   const [showPassword, setShowPassword] = useState(false);
@@ -28,7 +30,7 @@ export default function Login() {
   function loginAsAdmin() {
     setForm({
       email: ADMIN_EMAIL,
-      password: ADMIN_PASSWORD,
+      password: ADMIN_PASSWORD
     });
     setError("");
   }
@@ -36,57 +38,31 @@ export default function Login() {
   function loginAsUser() {
     setForm({
       email: USER_EMAIL,
-      password: USER_PASSWORD,
+      password: USER_PASSWORD
     });
     setError("");
   }
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
+    setError("");
 
-    const isAdmin =
-      form.email.trim().toLowerCase() === ADMIN_EMAIL &&
-      form.password === ADMIN_PASSWORD;
+    try {
+      const res = await login({
+        email: form.email.trim().toLowerCase(),
+        password: form.password
+      });
 
-    const isUser =
-      form.email.trim().toLowerCase() === USER_EMAIL &&
-      form.password === USER_PASSWORD;
+      const role = res.data.user.role;
 
-    localStorage.removeItem("mahi_auth_token");
-    localStorage.removeItem("mahi_admin_auth");
-    localStorage.removeItem("mahi_user");
-
-    if (isAdmin) {
-      localStorage.setItem("mahi_admin_auth", "true");
-      localStorage.setItem(
-        "mahi_user",
-        JSON.stringify({
-          email: ADMIN_EMAIL,
-          role: "admin",
-          name: "Admin",
-        })
-      );
-
-      navigate("/admin", { replace: true });
-      return;
+      if (role === "admin" || role === "super_admin") {
+        navigate("/admin", { replace: true });
+      } else {
+        navigate("/app", { replace: true });
+      }
+    } catch (err) {
+      setError(err?.response?.data?.message || "Login failed");
     }
-
-    if (isUser) {
-      localStorage.setItem("mahi_auth_token", "true");
-      localStorage.setItem(
-        "mahi_user",
-        JSON.stringify({
-          email: USER_EMAIL,
-          role: "user",
-          name: "User",
-        })
-      );
-
-      navigate("/app", { replace: true });
-      return;
-    }
-
-    setError("Invalid login credentials. Please use the admin or user demo login.");
   }
 
   return (
@@ -127,17 +103,15 @@ export default function Login() {
       <form className="w-full space-y-7" onSubmit={handleSubmit}>
         <div className="space-y-2.5">
           <label className="theme-label">Email Address</label>
-          <div className="relative">
-            <input
-              type="email"
-              name="email"
-              value={form.email}
-              onChange={handleChange}
-              className="theme-input"
-              placeholder="name@company.com"
-              required
-            />
-          </div>
+          <input
+            type="email"
+            name="email"
+            value={form.email}
+            onChange={handleChange}
+            className="theme-input"
+            placeholder="name@company.com"
+            required
+          />
         </div>
 
         <div className="space-y-2.5">
@@ -180,9 +154,10 @@ export default function Login() {
 
         <button
           type="submit"
-          className="theme-btn-primary w-full py-4 text-sm font-extrabold uppercase tracking-widest"
+          disabled={loading}
+          className="theme-btn-primary w-full py-4 text-sm font-extrabold uppercase tracking-widest disabled:opacity-60"
         >
-          Sign In
+          {loading ? "Signing In..." : "Sign In"}
         </button>
       </form>
     </AuthCard>

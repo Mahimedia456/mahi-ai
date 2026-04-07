@@ -1,34 +1,151 @@
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import ContentStatCard from "../components/content/ContentStatCard";
 import ContentTable from "../components/content/ContentTable";
-import { videoContent } from "../data/contentData";
+import {
+  deleteAdminContent,
+  fetchAdminContent,
+  fetchAdminContentStats,
+  updateAdminContent,
+} from "../../../api/adminContentApi";
 
 export default function ContentVideosPage() {
-  const approved = videoContent.filter((item) => item.status === "approved").length;
+  const [items, setItems] = useState([]);
+  const [stats, setStats] = useState({
+    total: 0,
+    approved: 0,
+    reported: 0,
+    deleted: 0,
+  });
+  const [loading, setLoading] = useState(true);
+  const [actionLoadingId, setActionLoadingId] = useState("");
+
+  async function loadData() {
+    try {
+      setLoading(true);
+
+      const [listRes, statsRes] = await Promise.all([
+        fetchAdminContent({ type: "video" }),
+        fetchAdminContentStats({ type: "video" }),
+      ]);
+
+      setItems(listRes.items || []);
+      setStats(statsRes.stats || {});
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  async function handleDelete(item) {
+    const ok = window.confirm(`Delete "${item.title}"?`);
+    if (!ok) return;
+
+    try {
+      setActionLoadingId(item.id);
+      await deleteAdminContent(item.id);
+      await loadData();
+    } catch (error) {
+      console.error(error);
+      alert(error.message);
+    } finally {
+      setActionLoadingId("");
+    }
+  }
+
+  async function handleApprove(item) {
+    const nextStatus = item.status === "approved" ? "reported" : "approved";
+
+    try {
+      setActionLoadingId(item.id);
+      await updateAdminContent(item.id, {
+        status: nextStatus,
+        flagged: nextStatus === "reported",
+        actionLabel:
+          nextStatus === "approved"
+            ? "Status changed to approved"
+            : "Status changed to reported",
+      });
+      await loadData();
+    } catch (error) {
+      console.error(error);
+      alert(error.message);
+    } finally {
+      setActionLoadingId("");
+    }
+  }
+
+  async function handleToggleVisibility(item) {
+    const nextVisibility = item.visibility === "private" ? "public" : "private";
+
+    try {
+      setActionLoadingId(item.id);
+      await updateAdminContent(item.id, {
+        visibility: nextVisibility,
+        actionLabel:
+          nextVisibility === "public"
+            ? "Asset set to visible"
+            : "Asset hidden from public view",
+      });
+      await loadData();
+    } catch (error) {
+      console.error(error);
+      alert(error.message);
+    } finally {
+      setActionLoadingId("");
+    }
+  }
+
+  if (loading) {
+    return <div className="text-sm text-white">Loading video content...</div>;
+  }
 
   return (
     <div className="space-y-8">
       <section className="rounded-[30px] border border-[#53f5e7]/10 bg-[#1b1b1b]/75 p-7 backdrop-blur-xl">
-        <p className="text-[12px] font-bold uppercase tracking-[0.28em] text-[#53f5e7]/80">
-          Content Management
-        </p>
-        <h1
-          className="mt-3 text-[34px] font-extrabold tracking-[-0.04em] text-white"
-          style={{ fontFamily: '"Plus Jakarta Sans", sans-serif' }}
-        >
-          Generated Videos
-        </h1>
-        <p className="mt-3 max-w-2xl text-sm leading-7 text-[#9eaaa7]">
-          Track video assets, rendering outputs, model lineage, and usage state.
-        </p>
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <p className="text-[12px] font-bold uppercase tracking-[0.28em] text-[#53f5e7]/80">
+              Content Management
+            </p>
+            <h1
+              className="mt-3 text-[34px] font-extrabold tracking-[-0.04em] text-white"
+              style={{ fontFamily: '"Plus Jakarta Sans", sans-serif' }}
+            >
+              Generated Videos
+            </h1>
+            <p className="mt-3 max-w-2xl text-sm leading-7 text-[#9eaaa7]">
+              Track video assets, rendering outputs, model lineage, and usage state.
+            </p>
+          </div>
+
+          <Link
+            to="/admin/content/upload"
+            className="rounded-2xl bg-[#53f5e7] px-5 py-3 text-sm font-bold text-black"
+          >
+            Upload New Asset
+          </Link>
+        </div>
       </section>
 
       <section className="grid grid-cols-1 gap-5 md:grid-cols-3">
-        <ContentStatCard title="Total Videos" value={videoContent.length} hint="All rendered video assets" />
-        <ContentStatCard title="Approved" value={approved} hint="Clean approved outputs" />
-        <ContentStatCard title="Workspace/Private" value={videoContent.length} hint="Current stored visibility mix" />
+        <ContentStatCard title="Total Videos" value={stats.total || 0} hint="All rendered video assets" />
+        <ContentStatCard title="Approved" value={stats.approved || 0} hint="Clean approved outputs" />
+        <ContentStatCard title="Reported" value={stats.reported || 0} hint="Flagged outputs" />
       </section>
 
-      <ContentTable data={videoContent} />
+      <ContentTable
+        data={items}
+        onDelete={handleDelete}
+        onApprove={handleApprove}
+        onToggleVisibility={handleToggleVisibility}
+        actionLoadingId={actionLoadingId}
+      />
     </div>
   );
 }

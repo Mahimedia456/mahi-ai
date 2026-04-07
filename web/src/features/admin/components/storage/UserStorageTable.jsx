@@ -1,4 +1,4 @@
-export default function UserStorageTable({ data }) {
+export default function UserStorageTable({ data = [] }) {
   return (
     <div className="overflow-hidden rounded-[28px] border border-[#53f5e7]/10 bg-[#1b1b1b]/75 backdrop-blur-xl">
       <div className="overflow-x-auto">
@@ -29,6 +29,14 @@ export default function UserStorageTable({ data }) {
                 <td className="px-6 py-5 text-sm text-[#d2dbd9]">{item.lastUpdated}</td>
               </tr>
             ))}
+
+            {!data.length && (
+              <tr>
+                <td colSpan={5} className="px-6 py-10 text-center text-sm text-[#90a09b]">
+                  No user storage data found.
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>

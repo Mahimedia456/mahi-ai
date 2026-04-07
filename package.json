@@ -1,0 +1,16 @@
+{
+  "name": "mahi-ai-root",
+  "private": true,
+  "scripts": {
+    "web": "npm --prefix web run dev",
+    "server": "npm --prefix server run dev",
+    "worker:agent": "npm --prefix server run worker:agent",
+    "worker:image": "npm --prefix server run worker:image",
+    "worker:ingest": "npm --prefix server run worker:ingest",
+    "python:agent": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"& '.\\workers\\.venv\\Scripts\\Activate.ps1'; $env:PYTHONPATH='D:\\mahi-ai\\workers'; uvicorn agent_worker.main:app --host 127.0.0.1 --port 8100\"",
+    "dev": "concurrently -n WEB,SERVER,AGENT,PYTHON -c cyan,green,yellow,magenta \"npm run web\" \"npm run server\" \"npm run worker:agent\" \"npm run python:agent\""
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.1"
+  }
+}

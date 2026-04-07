@@ -1,17 +1,13 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import AnalyticsTabs from "../components/analytics/AnalyticsTabs.jsx";
 import AnalyticsStatCard from "../components/analytics/AnalyticsStatCard.jsx";
-import {
-  activeUsersStats,
-  imageStats,
-  platformChart,
-  platformStats,
-  revenueChart,
-  revenueStats,
-  videoStats,
-} from "../data/analyticsData.js";
+import { fetchAnalyticsChart, fetchAnalyticsStats } from "../../../api/adminAnalyticsApi.js";
+
 function ChartCard({ title, subtitle, bars, labelsKey = "day" }) {
-  const max = useMemo(() => Math.max(...bars.map((item) => item.value)), [bars]);
+  const max = useMemo(() => {
+    if (!bars.length) return 1;
+    return Math.max(...bars.map((item) => Number(item.value || 0)), 1);
+  }, [bars]);
 
   return (
     <div className="rounded-[28px] border border-[#53f5e7]/10 bg-[#1b1b1b]/75 p-7 backdrop-blur-xl">
@@ -25,15 +21,15 @@ function ChartCard({ title, subtitle, bars, labelsKey = "day" }) {
 
       <div className="relative mt-8 flex h-64 items-end gap-3">
         {bars.map((item, index) => (
-          <div key={index} className="flex flex-1 flex-col items-center justify-end gap-3">
+          <div key={item.id || index} className="flex flex-1 flex-col items-center justify-end gap-3">
             <div
               className="w-full rounded-t-[12px] bg-[#53f5e7]/20"
-              style={{ height: `${(item.value / max) * 100}%` }}
+              style={{ height: `${(Number(item.value || 0) / max) * 100}%` }}
             >
               <div className="h-full w-full rounded-t-[12px] bg-[#53f5e7]" />
             </div>
             <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#73807d]">
-              {item[labelsKey]}
+              {item[labelsKey] || item.label}
             </span>
           </div>
         ))}
@@ -44,50 +40,70 @@ function ChartCard({ title, subtitle, bars, labelsKey = "day" }) {
 
 export default function AnalyticsPage() {
   const [activeTab, setActiveTab] = useState("platform");
+  const [stats, setStats] = useState([]);
+  const [chartBars, setChartBars] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  let stats = platformStats;
   let title = "Platform Analytics";
   let subtitle = "System-wide product and engagement metrics.";
   let chartTitle = "Weekly Platform Activity";
   let chartSubtitle = "Aggregated system performance over the last 7 days.";
-  let chartBars = platformChart;
   let labelsKey = "day";
 
   if (activeTab === "images") {
-    stats = imageStats;
     title = "Image Generation Stats";
     subtitle = "Image generation throughput, success, and speed metrics.";
     chartTitle = "Weekly Image Generation";
     chartSubtitle = "Image activity trend for the last 7 days.";
-    chartBars = platformChart;
   }
 
   if (activeTab === "videos") {
-    stats = videoStats;
     title = "Video Generation Stats";
     subtitle = "Video rendering throughput and output performance.";
     chartTitle = "Weekly Video Rendering";
     chartSubtitle = "Video rendering demand trend.";
-    chartBars = platformChart;
   }
 
   if (activeTab === "revenue") {
-    stats = revenueStats;
     title = "Revenue Analytics";
     subtitle = "Commercial performance, paid growth, and billing overview.";
     chartTitle = "Revenue Growth";
     chartSubtitle = "Monthly revenue progression.";
-    chartBars = revenueChart;
     labelsKey = "month";
   }
 
   if (activeTab === "active-users") {
-    stats = activeUsersStats;
     title = "Active Users";
     subtitle = "Engagement and retention across daily, weekly, and monthly cohorts.";
     chartTitle = "Active User Trend";
     chartSubtitle = "Weekly active user movement.";
-    chartBars = platformChart;
+  }
+
+  useEffect(() => {
+    async function loadData() {
+      try {
+        setLoading(true);
+
+        const [statsRes, chartRes] = await Promise.all([
+          fetchAnalyticsStats(activeTab),
+          fetchAnalyticsChart(activeTab),
+        ]);
+
+        setStats(statsRes.items || []);
+        setChartBars(chartRes.items || []);
+      } catch (error) {
+        console.error(error);
+        alert(error.message);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadData();
+  }, [activeTab]);
+
+  if (loading) {
+    return <div className="text-sm text-white">Loading analytics...</div>;
   }
 
   return (
@@ -110,7 +126,7 @@ export default function AnalyticsPage() {
       <section className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-4">
         {stats.map((item) => (
           <AnalyticsStatCard
-            key={item.label}
+            key={item.id || item.label}
             title={item.label}
             value={item.value}
             hint={item.hint}

@@ -1,27 +1,28 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import AuthCard from "../components/AuthCard";
+import { authApi } from "../../../api/authApi";
 
 export default function VerifyOtp() {
   const navigate = useNavigate();
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
-  const [seconds, setSeconds] = useState(114);
+  const [seconds, setSeconds] = useState(600);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
   const inputsRef = useRef([]);
 
+  const email = localStorage.getItem("mahi_verify_email");
+  const verifyType = localStorage.getItem("mahi_verify_type");
+
   useEffect(() => {
-    const email = localStorage.getItem("mahi_reset_email");
-    if (!email) {
+    if (!email || !verifyType) {
       navigate("/forgot-password", { replace: true });
     }
-  }, [navigate]);
+  }, [email, verifyType, navigate]);
 
   useEffect(() => {
     if (seconds <= 0) return;
-
-    const timer = setInterval(() => {
-      setSeconds((prev) => prev - 1);
-    }, 1000);
-
+    const timer = setInterval(() => setSeconds((prev) => prev - 1), 1000);
     return () => clearInterval(timer);
   }, [seconds]);
 
@@ -31,10 +32,10 @@ export default function VerifyOtp() {
 
   function handleChange(value, index) {
     if (!/^\d?$/.test(value)) return;
-
     const updated = [...otp];
     updated[index] = value;
     setOtp(updated);
+    setError("");
 
     if (value && index < 5) {
       inputsRef.current[index + 1]?.focus();
@@ -47,38 +48,73 @@ export default function VerifyOtp() {
     }
   }
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
 
     const enteredOtp = otp.join("");
-    const savedOtp = localStorage.getItem("mahi_reset_otp");
 
     if (enteredOtp.length !== 6) {
-      alert("Please enter the full 6-digit OTP.");
+      setError("Please enter the full 6-digit OTP.");
       return;
     }
 
-    if (enteredOtp !== savedOtp) {
-      alert("Invalid OTP. Use 123456 for this demo flow.");
-      return;
-    }
+    try {
+      setLoading(true);
 
-    localStorage.setItem("mahi_otp_verified", "true");
-    navigate("/reset-password", { replace: true });
+      if (verifyType === "register") {
+        await authApi.verifyRegisterOtp({
+          email,
+          code: enteredOtp
+        });
+        localStorage.removeItem("mahi_verify_email");
+        localStorage.removeItem("mahi_verify_type");
+        localStorage.removeItem("mahi_debug_otp");
+        navigate("/login", { replace: true });
+      } else {
+        await authApi.verifyForgotOtp({
+          email,
+          code: enteredOtp
+        });
+        localStorage.setItem("mahi_otp_verified", "true");
+        navigate("/reset-password", { replace: true });
+      }
+    } catch (err) {
+      setError(err?.response?.data?.message || "Invalid OTP");
+    } finally {
+      setLoading(false);
+    }
   }
 
-  function handleResend() {
-    localStorage.setItem("mahi_reset_otp", "123456");
-    setOtp(["", "", "", "", "", ""]);
-    setSeconds(114);
-    inputsRef.current[0]?.focus();
+  async function handleResend() {
+    try {
+      setError("");
+      setOtp(["", "", "", "", "", ""]);
+      setSeconds(600);
+
+      let res;
+
+      if (verifyType === "register") {
+        setError("For register flow, go back and submit register again to resend.");
+        return;
+      } else {
+        res = await authApi.forgotPassword({ email });
+      }
+
+      if (res?.data?.data?.otpPreview) {
+        localStorage.setItem("mahi_debug_otp", res.data.data.otpPreview);
+      }
+
+      inputsRef.current[0]?.focus();
+    } catch (err) {
+      setError(err?.response?.data?.message || "Unable to resend OTP");
+    }
   }
 
   return (
     <AuthCard
       icon="🔒"
       title="Verify OTP"
-      subtitle="Enter the 6-digit code sent to your email."
+      subtitle={`Enter the 6-digit code sent to ${email || "your email"}.`}
       footer={
         <div className="flex flex-col items-center gap-5">
           <div className="text-center">
@@ -101,6 +137,12 @@ export default function VerifyOtp() {
           >
             Expires in {formattedTime}
           </div>
+
+          {localStorage.getItem("mahi_debug_otp") ? (
+            <div className="text-[11px] text-mahi-accent">
+              Dev OTP: {localStorage.getItem("mahi_debug_otp")}
+            </div>
+          ) : null}
 
           <Link
             to="/login"
@@ -131,11 +173,18 @@ export default function VerifyOtp() {
           ))}
         </div>
 
+        {error ? (
+          <div className="rounded-[16px] border border-red-500/20 bg-red-500/10 px-4 py-3 text-[12px] font-medium text-red-300">
+            {error}
+          </div>
+        ) : null}
+
         <button
           type="submit"
-          className="theme-btn-primary w-full py-4 text-sm font-extrabold uppercase tracking-widest"
+          disabled={loading}
+          className="theme-btn-primary w-full py-4 text-sm font-extrabold uppercase tracking-widest disabled:opacity-60"
         >
-          Verify
+          {loading ? "Verifying..." : "Verify"}
         </button>
       </form>
     </AuthCard>

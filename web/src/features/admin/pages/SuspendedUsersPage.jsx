@@ -1,8 +1,59 @@
+import { useEffect, useState } from "react";
 import UsersTable from "../components/users/UsersTable";
-import { users } from "../data/usersData";
+import { adminApi } from "../../../api/adminApi";
 
 export default function SuspendedUsersPage() {
-  const suspended = users.filter((u) => u.status === "suspended");
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  async function loadUsers() {
+    try {
+      setLoading(true);
+      const res = await adminApi.getUsers({ status: "suspended" });
+      setUsers(res.data.data.users || []);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    loadUsers();
+  }, []);
+
+  async function handleDelete(user) {
+    const ok = window.confirm(`Delete ${user.name}?`);
+    if (!ok) return;
+
+    try {
+      await adminApi.deleteUser(user.id);
+      await loadUsers();
+    } catch (error) {
+      alert(error?.response?.data?.message || "Delete failed");
+    }
+  }
+
+  async function handleToggleStatus(user) {
+    try {
+      await adminApi.updateUser(user.id, { status: "active" });
+      await loadUsers();
+    } catch (error) {
+      alert(error?.response?.data?.message || "Status update failed");
+    }
+  }
+
+  async function handleEdit(user) {
+    const fullName = window.prompt("Update full name", user.name);
+    if (!fullName) return;
+
+    try {
+      await adminApi.updateUser(user.id, { fullName });
+      await loadUsers();
+    } catch (error) {
+      alert(error?.response?.data?.message || "Update failed");
+    }
+  }
 
   return (
     <div className="space-y-8">
@@ -21,7 +72,18 @@ export default function SuspendedUsersPage() {
         </p>
       </section>
 
-      <UsersTable data={suspended} />
+      <section className="rounded-[28px] border border-[#53f5e7]/10 bg-[#1b1b1b]/75 p-5 backdrop-blur-xl">
+        {loading ? (
+          <div className="py-10 text-center text-sm text-[#8f9a97]">Loading suspended users...</div>
+        ) : (
+          <UsersTable
+            data={users}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+            onToggleStatus={handleToggleStatus}
+          />
+        )}
+      </section>
     </div>
   );
 }

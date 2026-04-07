@@ -1,0 +1,276 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum UserRole {
+  super_admin
+  admin
+  user
+}
+
+enum UserStatus {
+  active
+  suspended
+  pending
+}
+
+enum OtpType {
+  register
+  forgot_password
+  email_verify
+}
+
+enum BillingCycle {
+  monthly
+  yearly
+  lifetime
+}
+
+enum SubscriptionStatus {
+  active
+  expired
+  cancelled
+  trial
+}
+
+enum UsageType {
+  chat
+  image_generate
+  image_edit
+  video_generate
+  upload
+}
+
+enum ConversationType {
+  general
+  image
+  video
+}
+
+enum SenderType {
+  user
+  assistant
+  system
+}
+
+enum MessageType {
+  text
+  image
+  video
+  file
+}
+
+enum JobType {
+  text_chat
+  text_to_image
+  image_edit
+  image_to_video
+}
+
+enum JobStatus {
+  queued
+  processing
+  completed
+  failed
+}
+
+enum AssetType {
+  uploaded_image
+  generated_image
+  generated_video
+  avatar
+  document
+}
+
+model User {
+  id               String            @id @default(uuid())
+  fullName         String            @map("full_name") @db.VarChar(150)
+  email            String            @unique @db.VarChar(255)
+  passwordHash     String            @map("password_hash")
+  role             UserRole          @default(user)
+  status           UserStatus        @default(pending)
+  avatarUrl        String?           @map("avatar_url")
+  emailVerifiedAt  DateTime?         @map("email_verified_at")
+  lastLoginAt      DateTime?         @map("last_login_at")
+  createdAt        DateTime          @default(now()) @map("created_at")
+  updatedAt        DateTime          @updatedAt @map("updated_at")
+
+  otpVerifications OtpVerification[]
+  subscriptions    Subscription[]
+  conversations    Conversation[]
+  usageWallet      UsageWallet?
+  usageLogs        UsageLog[]
+  aiJobs           AiJob[]
+  mediaAssets      MediaAsset[]
+
+  @@map("users")
+}
+
+model OtpVerification {
+  id         String    @id @default(uuid())
+  userId     String?   @map("user_id")
+  email      String    @db.VarChar(255)
+  code       String    @db.VarChar(10)
+  type       OtpType
+  expiresAt  DateTime  @map("expires_at")
+  verifiedAt DateTime? @map("verified_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("otp_verifications")
+}
+
+model Plan {
+  id                    String         @id @default(uuid())
+  name                  String         @db.VarChar(100)
+  slug                  String         @unique @db.VarChar(100)
+  description           String?
+  priceMonthly          Decimal        @default(0) @map("price_monthly") @db.Decimal(10, 2)
+  priceYearly           Decimal?       @map("price_yearly") @db.Decimal(10, 2)
+  creditsMonthly        Int            @default(0) @map("credits_monthly")
+  imageGenerationsLimit Int            @default(0) @map("image_generations_limit")
+  videoGenerationsLimit Int            @default(0) @map("video_generations_limit")
+  chatMessagesLimit     Int            @default(0) @map("chat_messages_limit")
+  maxFileUploadMb       Int            @default(10) @map("max_file_upload_mb")
+  featuresJson          Json?          @map("features_json")
+  isActive              Boolean        @default(true) @map("is_active")
+  sortOrder             Int            @default(0) @map("sort_order")
+  createdAt             DateTime       @default(now()) @map("created_at")
+  updatedAt             DateTime       @updatedAt @map("updated_at")
+
+  subscriptions         Subscription[]
+
+  @@map("plans")
+}
+
+model Subscription {
+  id               String             @id @default(uuid())
+  userId           String             @map("user_id")
+  planId           String             @map("plan_id")
+  billingCycle     BillingCycle       @default(monthly) @map("billing_cycle")
+  status           SubscriptionStatus @default(active)
+  startDate        DateTime           @default(now()) @map("start_date")
+  endDate          DateTime?          @map("end_date")
+  autoRenew        Boolean            @default(false) @map("auto_renew")
+  paymentProvider  String?            @map("payment_provider") @db.VarChar(50)
+  paymentReference String?            @map("payment_reference") @db.VarChar(255)
+  createdAt        DateTime           @default(now()) @map("created_at")
+  updatedAt        DateTime           @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan Plan @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  @@map("subscriptions")
+}
+
+model UsageWallet {
+  id                    String   @id @default(uuid())
+  userId                String   @unique @map("user_id")
+  chatCreditsRemaining  Int      @default(0) @map("chat_credits_remaining")
+  imageCreditsRemaining Int      @default(0) @map("image_credits_remaining")
+  videoCreditsRemaining Int      @default(0) @map("video_credits_remaining")
+  storageUsedMb         Int      @default(0) @map("storage_used_mb")
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("usage_wallets")
+}
+
+model UsageLog {
+  id           String    @id @default(uuid())
+  userId       String    @map("user_id")
+  type         UsageType
+  creditsUsed  Int       @default(0) @map("credits_used")
+  requestCount Int       @default(1) @map("request_count")
+  metadataJson Json?     @map("metadata_json")
+  createdAt    DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("usage_logs")
+}
+
+model Conversation {
+  id            String           @id @default(uuid())
+  userId        String           @map("user_id")
+  title         String?          @db.VarChar(255)
+  type          ConversationType @default(general)
+  lastMessageAt DateTime?        @map("last_message_at")
+  createdAt     DateTime         @default(now()) @map("created_at")
+  updatedAt     DateTime         @updatedAt @map("updated_at")
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages Message[]
+  aiJobs   AiJob[]
+
+  @@map("conversations")
+}
+
+model Message {
+  id             String      @id @default(uuid())
+  conversationId String      @map("conversation_id")
+  senderType     SenderType  @map("sender_type")
+  content        String
+  messageType    MessageType @default(text) @map("message_type")
+  metadataJson   Json?       @map("metadata_json")
+  createdAt      DateTime    @default(now()) @map("created_at")
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@map("messages")
+}
+
+model AiJob {
+  id              String      @id @default(uuid())
+  userId          String      @map("user_id")
+  conversationId  String?     @map("conversation_id")
+  jobType         JobType     @map("job_type")
+  prompt          String
+  negativePrompt  String?     @map("negative_prompt")
+  inputAssetId    String?     @map("input_asset_id")
+  status          JobStatus   @default(queued)
+  progressPercent Int         @default(0) @map("progress_percent")
+  modelName       String?     @map("model_name") @db.VarChar(100)
+  outputText      String?     @map("output_text")
+  errorMessage    String?     @map("error_message")
+  startedAt       DateTime?   @map("started_at")
+  completedAt     DateTime?   @map("completed_at")
+  createdAt       DateTime    @default(now()) @map("created_at")
+  updatedAt       DateTime    @updatedAt @map("updated_at")
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  conversation Conversation? @relation(fields: [conversationId], references: [id], onDelete: SetNull)
+  mediaAssets  MediaAsset[]
+
+  @@map("ai_jobs")
+}
+
+model MediaAsset {
+  id              String    @id @default(uuid())
+  userId          String    @map("user_id")
+  aiJobId         String?   @map("ai_job_id")
+  assetType       AssetType @map("asset_type")
+  fileUrl         String    @map("file_url")
+  fileName        String    @map("file_name") @db.VarChar(255)
+  mimeType        String    @map("mime_type") @db.VarChar(100)
+  fileSizeBytes   BigInt    @map("file_size_bytes")
+  width           Int?
+  height          Int?
+  durationSeconds Int?      @map("duration_seconds")
+  metadataJson    Json?     @map("metadata_json")
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  aiJob AiJob? @relation(fields: [aiJobId], references: [id], onDelete: SetNull)
+
+  @@map("media_assets")
+}

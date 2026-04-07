@@ -23,14 +23,34 @@ function StatusBadge({ status }) {
   );
 }
 
-export default function ContentTable({ data }) {
+function VisibilityBadge({ visibility }) {
+  const map = {
+    public: "bg-[#53f5e7]/10 text-[#53f5e7]",
+    workspace: "bg-blue-500/10 text-blue-300",
+    private: "bg-white/10 text-[#d2dbd9]",
+  };
+
+  return (
+    <span className={`rounded-full px-3 py-1 text-[11px] font-semibold capitalize ${map[visibility] || "bg-white/10 text-white"}`}>
+      {visibility || "private"}
+    </span>
+  );
+}
+
+export default function ContentTable({
+  data = [],
+  onDelete,
+  onApprove,
+  onToggleVisibility,
+  actionLoadingId,
+}) {
   return (
     <div className="overflow-hidden rounded-[28px] border border-[#53f5e7]/10 bg-[#1b1b1b]/75 backdrop-blur-xl">
       <div className="overflow-x-auto">
         <table className="min-w-full">
           <thead className="border-b border-white/5 bg-[#171717]">
             <tr>
-              {["Title", "Type", "User", "Model", "Status", "Created", "Action"].map((head) => (
+              {["Title", "Type", "User", "Model", "Status", "Visibility", "Created", "Action"].map((head) => (
                 <th
                   key={head}
                   className="px-6 py-4 text-left text-[11px] font-bold uppercase tracking-[0.22em] text-[#86938f]"
@@ -42,36 +62,87 @@ export default function ContentTable({ data }) {
           </thead>
 
           <tbody>
-            {data.map((item) => (
-              <tr key={item.id} className="border-b border-white/5 last:border-b-0">
-                <td className="px-6 py-5">
-                  <div>
-                    <p className="text-sm font-semibold text-white">{item.title}</p>
-                    <p className="mt-1 text-xs text-[#90a09b]">{item.id}</p>
-                  </div>
-                </td>
-                <td className="px-6 py-5">
-                  <TypeBadge type={item.type} />
-                </td>
-                <td className="px-6 py-5">
-                  <p className="text-sm text-white">{item.userName}</p>
-                  <p className="mt-1 text-xs text-[#90a09b]">{item.userEmail}</p>
-                </td>
-                <td className="px-6 py-5 text-sm text-[#d2dbd9]">{item.model}</td>
-                <td className="px-6 py-5">
-                  <StatusBadge status={item.status} />
-                </td>
-                <td className="px-6 py-5 text-sm text-[#d2dbd9]">{item.createdAt}</td>
-                <td className="px-6 py-5">
-                  <Link
-                    to={`/admin/content/${item.id}`}
-                    className="rounded-xl bg-[#53f5e7]/10 px-3 py-2 text-xs font-semibold text-[#53f5e7] transition hover:bg-[#53f5e7]/15"
-                  >
-                    View Details
-                  </Link>
+            {data.map((item) => {
+              const isLoading = actionLoadingId === item.id;
+
+              return (
+                <tr key={item.id} className="border-b border-white/5 last:border-b-0">
+                  <td className="px-6 py-5">
+                    <div>
+                      <p className="text-sm font-semibold text-white">{item.title}</p>
+                      <p className="mt-1 text-xs text-[#90a09b]">{item.id}</p>
+                    </div>
+                  </td>
+
+                  <td className="px-6 py-5">
+                    <TypeBadge type={item.type} />
+                  </td>
+
+                  <td className="px-6 py-5">
+                    <p className="text-sm text-white">{item.userName}</p>
+                    <p className="mt-1 text-xs text-[#90a09b]">{item.userEmail}</p>
+                  </td>
+
+                  <td className="px-6 py-5 text-sm text-[#d2dbd9]">{item.model || "-"}</td>
+
+                  <td className="px-6 py-5">
+                    <StatusBadge status={item.status} />
+                  </td>
+
+                  <td className="px-6 py-5">
+                    <VisibilityBadge visibility={item.visibility} />
+                  </td>
+
+                  <td className="px-6 py-5 text-sm text-[#d2dbd9]">{item.createdAt}</td>
+
+                  <td className="px-6 py-5">
+                    <div className="flex flex-wrap gap-2">
+                      <Link
+                        to={`/admin/content/${item.id}`}
+                        className="rounded-xl bg-[#53f5e7]/10 px-3 py-2 text-xs font-semibold text-[#53f5e7] transition hover:bg-[#53f5e7]/15"
+                      >
+                        View
+                      </Link>
+
+                      <button
+                        type="button"
+                        disabled={isLoading}
+                        onClick={() => onApprove?.(item)}
+                        className="rounded-xl bg-blue-500/10 px-3 py-2 text-xs font-semibold text-blue-300 transition hover:bg-blue-500/15 disabled:opacity-60"
+                      >
+                        Status
+                      </button>
+
+                      <button
+                        type="button"
+                        disabled={isLoading}
+                        onClick={() => onToggleVisibility?.(item)}
+                        className="rounded-xl bg-white/10 px-3 py-2 text-xs font-semibold text-white transition hover:bg-white/15 disabled:opacity-60"
+                      >
+                        {item.visibility === "private" ? "Show" : "Hide"}
+                      </button>
+
+                      <button
+                        type="button"
+                        disabled={isLoading}
+                        onClick={() => onDelete?.(item)}
+                        className="rounded-xl bg-red-500/10 px-3 py-2 text-xs font-semibold text-red-300 transition hover:bg-red-500/15 disabled:opacity-60"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+
+            {!data.length && (
+              <tr>
+                <td colSpan={8} className="px-6 py-10 text-center text-sm text-[#90a09b]">
+                  No content found.
                 </td>
               </tr>
-            ))}
+            )}
           </tbody>
         </table>
       </div>

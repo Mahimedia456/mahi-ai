@@ -1,6 +1,21 @@
-import { userActivityFeed } from "../data/usersData";
+import { useEffect, useState } from "react";
+import { adminApi } from "../../../api/adminApi";
 
 export default function UserActivityPage() {
+  const [activity, setActivity] = useState([]);
+
+  useEffect(() => {
+    async function load() {
+      try {
+        const res = await adminApi.getUserActivity();
+        setActivity(res.data.data.activity || []);
+      } catch (error) {
+        console.error(error);
+      }
+    }
+    load();
+  }, []);
+
   return (
     <div className="space-y-8">
       <section className="rounded-[30px] border border-[#53f5e7]/10 bg-[#1b1b1b]/75 p-7 backdrop-blur-xl">
@@ -19,7 +34,7 @@ export default function UserActivityPage() {
       </section>
 
       <div className="space-y-4">
-        {userActivityFeed.map((item) => (
+        {activity.map((item) => (
           <div
             key={item.id}
             className="rounded-[24px] border border-[#53f5e7]/10 bg-[#1b1b1b]/75 p-5 backdrop-blur-xl"
@@ -36,7 +51,7 @@ export default function UserActivityPage() {
               </div>
 
               <span className="rounded-full bg-[#53f5e7]/10 px-3 py-1 text-[11px] font-semibold text-[#53f5e7]">
-                {item.time}
+                {new Date(item.time).toLocaleString()}
               </span>
             </div>
           </div>

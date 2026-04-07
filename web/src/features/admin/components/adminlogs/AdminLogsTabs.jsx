@@ -6,7 +6,7 @@ const tabs = [
   { id: "moderation", label: "Moderation Logs" },
 ];
 
-export default function LogsTabs({ activeTab, onChange }) {
+export default function AdminLogsTabs({ activeTab, onChange }) {
   return (
     <div className="flex flex-wrap gap-2">
       {tabs.map((tab) => (

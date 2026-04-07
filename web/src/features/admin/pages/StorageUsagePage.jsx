@@ -1,8 +1,57 @@
+import { useEffect, useMemo, useState } from "react";
 import StorageStatCard from "../components/storage/StorageStatCard";
 import UserStorageTable from "../components/storage/UserStorageTable";
-import { storageSummary, userStorageRecords } from "../data/storageData";
+import { fetchStorageSummary, fetchUserStorageUsage } from "../../../api/adminStorageApi";
 
 export default function StorageUsagePage() {
+  const [summary, setSummary] = useState(null);
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  async function loadData() {
+    try {
+      setLoading(true);
+
+      const [summaryRes, usersRes] = await Promise.all([
+        fetchStorageSummary(),
+        fetchUserStorageUsage(),
+      ]);
+
+      setSummary(summaryRes.summary || null);
+      setUsers(usersRes.items || []);
+    } catch (error) {
+      console.error(error);
+      alert(error.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const distribution = useMemo(() => {
+    const total = Number(summary?.totalUsedBytes || 0);
+    if (!total) {
+      return {
+        images: 0,
+        videos: 0,
+        archived: 0,
+      };
+    }
+
+    return {
+      images: Math.max(2, Math.round((Number(summary?.imageBytes || 0) / total) * 100)),
+      videos: Math.max(2, Math.round((Number(summary?.videoBytes || 0) / total) * 100)),
+      archived: Math.max(2, Math.round((Number(summary?.archivedBytes || 0) / total) * 100)),
+    };
+  }, [summary]);
+
+  if (loading || !summary) {
+    return <div className="text-sm text-white">Loading storage usage...</div>;
+  }
+
   return (
     <div className="space-y-8">
       <section className="rounded-[30px] border border-[#53f5e7]/10 bg-[#1b1b1b]/75 p-7 backdrop-blur-xl">
@@ -23,22 +72,22 @@ export default function StorageUsagePage() {
       <section className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-4">
         <StorageStatCard
           title="Total Used"
-          value={storageSummary.totalUsed}
-          hint={`of ${storageSummary.totalCapacity} total capacity`}
+          value={summary.totalUsed}
+          hint={`of ${summary.totalCapacity} total capacity`}
         />
         <StorageStatCard
           title="Utilization"
-          value={`${storageSummary.utilization}%`}
-          hint={`Monthly growth ${storageSummary.monthlyGrowth}`}
+          value={`${summary.utilization}%`}
+          hint={`Monthly growth ${summary.monthlyGrowth}`}
         />
         <StorageStatCard
           title="Images"
-          value={storageSummary.imageStorage}
+          value={summary.imageStorage}
           hint="Generated image assets"
         />
         <StorageStatCard
           title="Videos"
-          value={storageSummary.videoStorage}
+          value={summary.videoStorage}
           hint="Rendered video outputs"
         />
       </section>
@@ -59,30 +108,30 @@ export default function StorageUsagePage() {
             <div>
               <div className="mb-2 flex items-center justify-between text-sm">
                 <span className="text-[#a2afac]">Images</span>
-                <span className="text-white">{storageSummary.imageStorage}</span>
+                <span className="text-white">{summary.imageStorage}</span>
               </div>
               <div className="h-3 w-full overflow-hidden rounded-full bg-[#252525]">
-                <div className="h-full w-[40%] rounded-full bg-[#53f5e7]" />
+                <div className="h-full rounded-full bg-[#53f5e7]" style={{ width: `${distribution.images}%` }} />
               </div>
             </div>
 
             <div>
               <div className="mb-2 flex items-center justify-between text-sm">
                 <span className="text-[#a2afac]">Videos</span>
-                <span className="text-white">{storageSummary.videoStorage}</span>
+                <span className="text-white">{summary.videoStorage}</span>
               </div>
               <div className="h-3 w-full overflow-hidden rounded-full bg-[#252525]">
-                <div className="h-full w-[55%] rounded-full bg-[#53f5e7]" />
+                <div className="h-full rounded-full bg-[#53f5e7]" style={{ width: `${distribution.videos}%` }} />
               </div>
             </div>
 
             <div>
               <div className="mb-2 flex items-center justify-between text-sm">
                 <span className="text-[#a2afac]">Archived Media</span>
-                <span className="text-white">{storageSummary.archivedStorage}</span>
+                <span className="text-white">{summary.archivedStorage}</span>
               </div>
               <div className="h-3 w-full overflow-hidden rounded-full bg-[#252525]">
-                <div className="h-full w-[12%] rounded-full bg-[#53f5e7]" />
+                <div className="h-full rounded-full bg-[#53f5e7]" style={{ width: `${distribution.archived}%` }} />
               </div>
             </div>
           </div>
@@ -98,17 +147,17 @@ export default function StorageUsagePage() {
           <div className="mt-5 space-y-4">
             <div className="rounded-2xl border border-white/5 bg-[#151515] p-4">
               <p className="text-sm text-[#98a5a2]">Active Buckets</p>
-              <p className="mt-2 text-2xl font-bold text-white">{storageSummary.activeBuckets}</p>
+              <p className="mt-2 text-2xl font-bold text-white">{summary.activeBuckets}</p>
             </div>
 
             <div className="rounded-2xl border border-white/5 bg-[#151515] p-4">
               <p className="text-sm text-[#98a5a2]">Archived Storage</p>
-              <p className="mt-2 text-2xl font-bold text-white">{storageSummary.archivedStorage}</p>
+              <p className="mt-2 text-2xl font-bold text-white">{summary.archivedStorage}</p>
             </div>
 
             <div className="rounded-2xl border border-white/5 bg-[#151515] p-4">
               <p className="text-sm text-[#98a5a2]">Growth Rate</p>
-              <p className="mt-2 text-2xl font-bold text-white">{storageSummary.monthlyGrowth}</p>
+              <p className="mt-2 text-2xl font-bold text-white">{summary.monthlyGrowth}</p>
             </div>
           </div>
         </div>
@@ -127,7 +176,7 @@ export default function StorageUsagePage() {
           </p>
         </div>
 
-        <UserStorageTable data={userStorageRecords} />
+        <UserStorageTable data={users} />
       </section>
     </div>
   );

@@ -1,43 +1,62 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import AuthCard from "../components/AuthCard";
+import { authApi } from "../../../api/authApi";
 
 export default function ResetPassword() {
   const navigate = useNavigate();
+  const email = localStorage.getItem("mahi_verify_email");
 
   const [form, setForm] = useState({
     password: "",
-    confirmPassword: "",
+    confirmPassword: ""
   });
 
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     const isVerified = localStorage.getItem("mahi_otp_verified") === "true";
-    if (!isVerified) {
+    if (!isVerified || !email) {
       navigate("/forgot-password", { replace: true });
     }
-  }, [navigate]);
+  }, [navigate, email]);
 
   function handleChange(e) {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
+    setError("");
   }
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
 
     if (form.password !== form.confirmPassword) {
-      alert("Passwords do not match.");
+      setError("Passwords do not match.");
       return;
     }
 
-    localStorage.removeItem("mahi_reset_otp");
-    localStorage.removeItem("mahi_otp_verified");
-    localStorage.removeItem("mahi_reset_email");
+    try {
+      setLoading(true);
 
-    navigate("/login", { replace: true });
+      await authApi.resetPassword({
+        email,
+        password: form.password
+      });
+
+      localStorage.removeItem("mahi_otp_verified");
+      localStorage.removeItem("mahi_verify_email");
+      localStorage.removeItem("mahi_verify_type");
+      localStorage.removeItem("mahi_debug_otp");
+
+      navigate("/login", { replace: true });
+    } catch (err) {
+      setError(err?.response?.data?.message || "Unable to reset password");
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -102,11 +121,18 @@ export default function ResetPassword() {
           </div>
         </div>
 
+        {error ? (
+          <div className="rounded-[16px] border border-red-500/20 bg-red-500/10 px-4 py-3 text-[12px] font-medium text-red-300">
+            {error}
+          </div>
+        ) : null}
+
         <button
           type="submit"
-          className="theme-btn-primary w-full py-4 text-sm font-extrabold uppercase tracking-widest"
+          disabled={loading}
+          className="theme-btn-primary w-full py-4 text-sm font-extrabold uppercase tracking-widest disabled:opacity-60"
         >
-          Reset Password
+          {loading ? "Resetting..." : "Reset Password"}
         </button>
       </form>
     </AuthCard>
