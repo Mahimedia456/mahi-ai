@@ -1,151 +1,161 @@
-import { Link2, ImagePlus, HelpCircle } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Sparkles, Wand2, ScanSearch, ArrowUpCircle, UploadCloud } from "lucide-react";
+import ImageUploadDropzone from "../components/ImageUploadDropzone";
+import { useImageEditor } from "../context/ImageEditorContext";
 
 const actions = [
   {
-    title: "Masking",
-    desc: "Neural isolation of subjects with high-fidelity perimeter detection.",
+    title: "Generative Fill",
+    desc: "Mask an area and regenerate it with prompt-guided inpainting.",
+    to: "/image-editor/generative-fill",
+    icon: ScanSearch,
   },
   {
-    title: "Injection",
-    desc: "Contextual object synthesis via direct text-to-tensor injection.",
+    title: "Magic Tools",
+    desc: "Remove background, replace background, add objects, and erase elements.",
+    to: "/image-editor/magic-tools",
+    icon: Wand2,
   },
   {
-    title: "Style Map",
-    desc: "Remapping color and texture distributions via latent style transfer.",
-  },
-  {
-    title: "Environment",
-    desc: "Total background reconstruction using generative procedural seeds.",
-  },
-  {
-    title: "Resolution",
-    desc: "Super-resolution upscaling and neural de-noising algorithms.",
+    title: "Upscale",
+    desc: "Sharpen details, increase resolution, reduce noise, and improve portraits.",
+    to: "/image-editor/upscale",
+    icon: ArrowUpCircle,
   },
 ];
 
 export default function ImageEditorHome() {
-  return (
-    <div className="relative min-h-[calc(100vh-64px)] overflow-hidden bg-black">
-      <div className="pointer-events-none absolute right-[-5%] top-[-10%] h-[500px] w-[500px] rounded-full bg-mahi-accent/5 blur-[120px]" />
-      <div className="pointer-events-none absolute bottom-[-10%] left-[-5%] h-[400px] w-[400px] rounded-full bg-mahi-accent/5 blur-[100px]" />
+  const { inputPreview, inputPath } = useImageEditor();
 
-      <div className="relative z-10 mx-auto max-w-6xl px-8 py-12">
-        <div className="mb-16 space-y-4">
-          <div className="mb-6 flex items-center gap-2 text-mahi-accent">
-            <span className="h-2 w-2 animate-pulse rounded-full bg-mahi-accent" />
-            <span className="text-xs font-bold uppercase tracking-[0.2em]">
-              Module: Image Transformation
-            </span>
+  return (
+    <div className="space-y-10">
+      <section className="grid gap-8 xl:grid-cols-[1.05fr_0.95fr]">
+        <div className="rounded-[28px] border border-[#53f5e7]/12 bg-[#0b0b0b]/90 p-6 shadow-[0_20px_80px_rgba(0,0,0,0.35)]">
+          <div className="mb-5 flex items-center gap-3">
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-[#53f5e7]/20 bg-[#53f5e7]/[0.05] text-[#53f5e7]">
+              <UploadCloud size={18} />
+            </div>
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-[0.26em] text-[#53f5e7]">
+                Input Source
+              </p>
+              <h2
+                className="mt-1 text-xl font-extrabold uppercase tracking-[-0.04em] text-white"
+                style={{ fontFamily: '"Plus Jakarta Sans", sans-serif' }}
+              >
+                Upload Base Image
+              </h2>
+            </div>
           </div>
 
-          <h1 className="theme-heading max-w-2xl text-2xl font-bold uppercase tracking-[-0.03em] text-white md:text-4xl">
-            Pixel <span className="italic text-mahi-accent">Synthesis</span>
-          </h1>
+          <ImageUploadDropzone />
+        </div>
 
-          <p className="max-w-2xl border-l border-mahi-accent/20 pl-3 text- leading-relaxed text-white/35">
-            Directing neural networks through high-contrast interfaces. Upload to begin manipulation.
+        <div className="rounded-[28px] border border-[#53f5e7]/12 bg-[#0b0b0b]/90 p-6 shadow-[0_20px_80px_rgba(0,0,0,0.35)]">
+          <div className="mb-5 flex items-center justify-between gap-4">
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-[0.26em] text-[#53f5e7]">
+                Source Preview
+              </p>
+              <h2
+                className="mt-1 text-xl font-extrabold uppercase tracking-[-0.04em] text-white"
+                style={{ fontFamily: '"Plus Jakarta Sans", sans-serif' }}
+              >
+                Ready for Editing
+              </h2>
+            </div>
+
+            {inputPath ? (
+              <span className="rounded-full border border-[#53f5e7]/25 bg-[#53f5e7]/10 px-3 py-2 text-[10px] font-bold uppercase tracking-[0.2em] text-[#53f5e7]">
+                Uploaded
+              </span>
+            ) : (
+              <span className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-2 text-[10px] font-bold uppercase tracking-[0.2em] text-white/40">
+                Waiting
+              </span>
+            )}
+          </div>
+
+          <div className="flex min-h-[420px] items-center justify-center rounded-[24px] border border-dashed border-[#53f5e7]/15 bg-black/40 p-5">
+            {inputPreview ? (
+              <img
+                src={inputPreview}
+                alt="Uploaded source"
+                className="max-h-[380px] w-full rounded-[18px] object-contain"
+              />
+            ) : (
+              <div className="text-center">
+                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl border border-[#53f5e7]/15 bg-[#53f5e7]/[0.03] text-[#53f5e7]">
+                  <Sparkles size={24} />
+                </div>
+                <p className="mt-5 text-sm font-medium text-white/55">
+                  Upload an image to activate the editing workflow.
+                </p>
+                <p className="mt-2 text-xs uppercase tracking-[0.22em] text-white/25">
+                  PNG / JPG / WEBP
+                </p>
+              </div>
+            )}
+          </div>
+
+          {inputPath ? (
+            <p className="mt-4 break-all text-xs leading-6 text-white/25">
+              {inputPath}
+            </p>
+          ) : null}
+        </div>
+      </section>
+
+      <section className="rounded-[28px] border border-[#53f5e7]/12 bg-[#0b0b0b]/90 p-6 shadow-[0_20px_80px_rgba(0,0,0,0.35)]">
+        <div className="mb-6">
+          <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-[#53f5e7]">
+            Editor Tools
+          </p>
+          <h2
+            className="mt-2 text-2xl font-extrabold uppercase tracking-[-0.04em] text-white"
+            style={{ fontFamily: '"Plus Jakarta Sans", sans-serif' }}
+          >
+            Choose Your Workflow
+          </h2>
+          <p className="mt-2 max-w-3xl text-sm leading-7 text-white/40">
+            Start with one of the core workflows below. After uploading a source image,
+            move into detailed editing, cleanup, inpainting, or enhancement.
           </p>
         </div>
 
-        <div className="mb-24">
-          <div className="group relative cursor-pointer overflow-hidden border border-mahi-accent/20 p-20 transition-all duration-700 hover:border-mahi-accent/60">
-            <div className="absolute inset-0 bg-mahi-accent/[0.01] transition-colors group-hover:bg-mahi-accent/[0.03]" />
+        <div className="grid gap-6 md:grid-cols-3">
+          {actions.map((item) => {
+            const Icon = item.icon;
 
-            <div className="absolute left-0 top-0 h-4 w-4 border-l-2 border-t-2 border-mahi-accent/40 group-hover:border-mahi-accent" />
-            <div className="absolute right-0 top-0 h-4 w-4 border-r-2 border-t-2 border-mahi-accent/40 group-hover:border-mahi-accent" />
-            <div className="absolute bottom-0 left-0 h-4 w-4 border-b-2 border-l-2 border-mahi-accent/40 group-hover:border-mahi-accent" />
-            <div className="absolute bottom-0 right-0 h-4 w-4 border-b-2 border-r-2 border-mahi-accent/40 group-hover:border-mahi-accent" />
-
-            <div className="relative z-10 flex flex-col items-center text-center">
-              <div className="mb-10 flex h-24 w-24 items-center justify-center border border-mahi-accent/20 transition-all duration-500 group-hover:border-mahi-accent">
-                <ImagePlus size={48} className="text-mahi-accent" />
-              </div>
-
-              <h3 className="theme-heading text-3xl font-bold uppercase tracking-[0.2em] text-white">
-                Input Source
-              </h3>
-              <p className="mb-12 mt-4 text-xs uppercase tracking-[0.24em] text-white/25">
-                DRAG DATA OR BROWSE (RAW / PNG / JPG)
-              </p>
-
-              <div className="flex items-center gap-6">
-                <button className="bg-mahi-accent px-12 py-5 text-[10px] font-bold uppercase tracking-[0.2em] text-black transition-all hover:bg-white">
-                  Browse Files
-                </button>
-
-                <div className="flex gap-4">
-                  <button className="border border-mahi-accent/20 p-4 text-white transition-all hover:border-mahi-accent hover:text-mahi-accent">
-                    <Link2 size={18} />
-                  </button>
-                  <button className="border border-mahi-accent/20 p-4 text-white transition-all hover:border-mahi-accent hover:text-mahi-accent">
-                    <ImagePlus size={18} />
-                  </button>
+            return (
+              <Link
+                key={item.title}
+                to={item.to}
+                className="group rounded-[24px] border border-[#53f5e7]/12 bg-black/30 p-6 transition-all duration-300 hover:-translate-y-1 hover:border-[#53f5e7]/40 hover:bg-[#53f5e7]/[0.04]"
+              >
+                <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-[#53f5e7]/15 bg-[#53f5e7]/[0.04] text-[#53f5e7] transition-all duration-300 group-hover:border-[#53f5e7]/35 group-hover:bg-[#53f5e7]/10">
+                  <Icon size={20} />
                 </div>
-              </div>
-            </div>
-          </div>
-        </div>
 
-        <div className="grid grid-cols-1 gap-0 border-l border-t border-mahi-accent/10 md:grid-cols-6">
-          <div className="col-span-full px-4 py-6">
-            <h2 className="text-[10px] font-bold uppercase tracking-[0.4em] text-mahi-accent/60">
-              // Operation Presets
-            </h2>
-          </div>
+                <h3
+                  className="mt-6 text-lg font-extrabold uppercase tracking-[0.04em] text-white"
+                  style={{ fontFamily: '"Plus Jakarta Sans", sans-serif' }}
+                >
+                  {item.title}
+                </h3>
 
-          {actions.slice(0, 3).map((item) => (
-            <div
-              key={item.title}
-              className="border-b border-r border-mahi-accent/10 p-8 transition-all hover:bg-mahi-accent/[0.02] md:col-span-2"
-            >
-              <div className="mb-8 flex h-12 w-12 items-center justify-center border border-mahi-accent/20 text-mahi-accent">
-                ✦
-              </div>
-              <h4 className="theme-heading text-lg font-bold uppercase tracking-[0.12em] text-white">
-                {item.title}
-              </h4>
-              <p className="mt-3 text-sm leading-7 text-white/35">{item.desc}</p>
-            </div>
-          ))}
+                <p className="mt-3 text-sm leading-7 text-white/40">
+                  {item.desc}
+                </p>
 
-          {actions.slice(3).map((item) => (
-            <div
-              key={item.title}
-              className="border-b border-r border-mahi-accent/10 p-10 transition-all hover:bg-mahi-accent/[0.02] md:col-span-3"
-            >
-              <div className="flex items-center gap-8">
-                <div className="flex h-20 w-20 shrink-0 items-center justify-center border border-mahi-accent/20 text-mahi-accent">
-                  ✦
+                <div className="mt-6 text-[11px] font-bold uppercase tracking-[0.22em] text-[#53f5e7]">
+                  Open Tool
                 </div>
-                <div>
-                  <h4 className="theme-heading text-xl font-bold uppercase tracking-[0.14em] text-white">
-                    {item.title}
-                  </h4>
-                  <p className="mt-3 text-sm leading-7 text-white/35">{item.desc}</p>
-                </div>
-              </div>
-            </div>
-          ))}
+              </Link>
+            );
+          })}
         </div>
-
-        <div className="mt-32 flex flex-col items-center justify-between gap-8 border-t border-mahi-accent/10 pt-12 text-[10px] uppercase tracking-[0.3em] text-white/20 md:flex-row">
-          <div className="flex gap-12">
-            <span className="transition-colors hover:text-mahi-accent">Privacy_Protocols</span>
-            <span className="transition-colors hover:text-mahi-accent">Usage_Terms</span>
-          </div>
-
-          <div className="flex items-center gap-3 border border-mahi-accent/30 px-4 py-2">
-            <span className="h-1.5 w-1.5 animate-pulse bg-mahi-accent" />
-            <span className="font-bold text-mahi-accent">Network Online</span>
-          </div>
-
-          <div>© 2024 MAHI_AI.CORP // GLOBAL_NODE_01</div>
-        </div>
-      </div>
-
-      <button className="fixed bottom-10 right-10 z-50 flex h-16 w-16 items-center justify-center border border-mahi-accent/40 bg-black text-mahi-accent transition-all hover:bg-mahi-accent hover:text-black">
-        <HelpCircle size={22} />
-      </button>
+      </section>
     </div>
   );
 }

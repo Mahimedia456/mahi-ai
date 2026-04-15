@@ -1,22 +1,24 @@
-import { agentQueue, imageQueue, ingestQueue } from "./queues.js";
+import { Queue } from "bullmq";
+import { redisConnection } from "./redis.js";
+
+export const agentRunsQueue = new Queue("agent-runs", {
+  connection: redisConnection,
+});
+
+export const imageJobsQueue = new Queue("image-jobs", {
+  connection: redisConnection,
+});
 
 export async function enqueueAgentRun(payload) {
-  return agentQueue.add("process-run", payload, {
-    removeOnComplete: 50,
+  return agentRunsQueue.add("agent-run", payload, {
+    removeOnComplete: 100,
     removeOnFail: 100,
   });
 }
 
 export async function enqueueImageJob(payload) {
-  return imageQueue.add("generate-image", payload, {
-    removeOnComplete: 50,
-    removeOnFail: 100,
-  });
-}
-
-export async function enqueueIngestJob(payload) {
-  return ingestQueue.add("ingest-file", payload, {
-    removeOnComplete: 50,
+  return imageJobsQueue.add("image-job", payload, {
+    removeOnComplete: 100,
     removeOnFail: 100,
   });
 }

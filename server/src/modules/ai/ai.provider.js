@@ -1,21 +1,38 @@
 import axios from "axios";
 import { env } from "../../config/env.js";
 
-export async function generateChatCompletion({ messages, model }) {
+function resolveModel(mode, explicitModel) {
+  if (explicitModel) return explicitModel;
+  if (mode === "code") return env.ollamaCodeModel;
+  if (mode === "fast") return env.ollamaFastModel;
+  return env.ollamaChatModel;
+}
+
+function buildOllamaOptions() {
+  return {
+    num_predict: env.ollamaNumPredict,
+    num_ctx: env.ollamaNumCtx,
+    temperature: env.ollamaTemperature,
+    top_p: env.ollamaTopP,
+    top_k: env.ollamaTopK,
+    repeat_penalty: env.ollamaRepeatPenalty,
+  };
+}
+
+export async function generateChatCompletion({ messages, model, mode = "chat" }) {
   const response = await axios.post(
-    `${env.vllmBaseUrl}/chat/completions`,
+    `${env.ollamaBaseUrl}/api/chat`,
     {
-      model: model || env.aiDefaultModel,
+      model: resolveModel(mode, model),
       messages,
-      temperature: 0.7,
       stream: false,
+      options: buildOllamaOptions(),
     },
     {
       headers: {
-        Authorization: `Bearer ${env.vllmApiKey}`,
         "Content-Type": "application/json",
       },
-      timeout: 120000,
+      timeout: 300000,
     }
   );
 

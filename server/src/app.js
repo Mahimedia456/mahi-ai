@@ -10,6 +10,8 @@ import userRoutes from "./modules/users/user.routes.js";
 import adminRoutes from "./modules/admin/admin.routes.js";
 import chatRoutes from "./modules/chats/chat.routes.js";
 import aiRoutes from "./modules/ai/ai.routes.js";
+import projectRoutes from "./modules/projects/projects.routes.js";
+import imageEditorRoutes from "./modules/image-editor/imageEditor.routes.js";
 
 import { errorMiddleware } from "./middlewares/error.middleware.js";
 
@@ -23,7 +25,7 @@ app.use(
   })
 );
 app.use(morgan("dev"));
-app.use(express.json({ limit: "10mb" }));
+app.use(express.json({ limit: "20mb" }));
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
@@ -31,27 +33,6 @@ app.get("/", (_req, res) => {
   res.json({
     success: true,
     message: "Mahi AI backend is running",
-  });
-});
-
-app.get("/api", (_req, res) => {
-  res.json({
-    success: true,
-    message: "Mahi AI API base route working",
-    routes: {
-      health: "/api/health",
-      register: "/api/auth/register",
-      verifyRegisterOtp: "/api/auth/verify-register-otp",
-      login: "/api/auth/login",
-      me: "/api/auth/me",
-      forgotPassword: "/api/auth/forgot-password",
-      verifyForgotOtp: "/api/auth/verify-forgot-otp",
-      resetPassword: "/api/auth/reset-password",
-      userDashboard: "/api/users/dashboard",
-      adminOverview: "/api/admin/overview",
-      aiTestChat: "/api/ai/test-chat",
-      chatThreads: "/api/chats/threads",
-    },
   });
 });
 
@@ -67,6 +48,8 @@ app.use("/api/users", userRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/chats", chatRoutes);
 app.use("/api/ai", aiRoutes);
+app.use("/api/projects", projectRoutes);
+app.use("/api/image-editor", imageEditorRoutes);
 
 app.use((req, res) => {
   res.status(404).json({

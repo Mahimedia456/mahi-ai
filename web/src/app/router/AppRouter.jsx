@@ -45,18 +45,19 @@ import ModelsPage from "../../features/admin/pages/ModelsPage";
 import ModelAnalyticsPage from "../../features/admin/pages/ModelAnalyticsPage";
 import ModelDetailsPage from "../../features/admin/pages/ModelDetailsPage";
 
-
 import AdminNotificationsPage from "../../features/admin/pages/AdminNotificationsPage";
 import AdminProfilePage from "../../features/admin/pages/AdminProfilePage";
 
-
 import ImageStudioLayout from "../../features/imageStudio/layouts/ImageStudioLayout";
+import ImageEditorLayout from "../../features/imageStudio/layouts/ImageEditorLayout";
+
 import ImageStudioHome from "../../features/imageStudio/pages/ImageStudioHome";
 import ImageStudioGenerating from "../../features/imageStudio/pages/ImageStudioGenerating";
 import ImageStudioResults from "../../features/imageStudio/pages/ImageStudioResults";
 import ImageStudioAssets from "../../features/imageStudio/pages/ImageStudioAssets";
 import ImageStudioHistory from "../../features/imageStudio/pages/ImageStudioHistory";
 import ImageStudioPresets from "../../features/imageStudio/pages/ImageStudioPresets";
+
 import ImageEditorHome from "../../features/imageStudio/pages/ImageEditorHome";
 import ImageEditorMagicTools from "../../features/imageStudio/pages/ImageEditorMagicTools";
 import ImageEditorGenerativeFill from "../../features/imageStudio/pages/ImageEditorGenerativeFill";
@@ -169,28 +170,31 @@ export default function AppRouter() {
           <Route path="media-library" element={<MediaLibraryPage />} />
         </Route>
 
-        <Route element={<ImageStudioLayout />}>
-          <Route path="image-studio" element={<ImageStudioHome />} />
-          <Route path="image-studio/generating" element={<ImageStudioGenerating />} />
-          <Route path="image-studio/results" element={<ImageStudioResults />} />
-          <Route path="image-studio/assets" element={<ImageStudioAssets />} />
-          <Route path="image-studio/history" element={<ImageStudioHistory />} />
-          <Route path="image-studio/presets" element={<ImageStudioPresets />} />
-
-          <Route path="image-editor" element={<ImageEditorHome />} />
-          <Route path="image-editor/magic-tools" element={<ImageEditorMagicTools />} />
-          <Route path="image-editor/generative-fill" element={<ImageEditorGenerativeFill />} />
-          <Route path="image-editor/upscale" element={<ImageEditorUpscale />} />
-          <Route path="image-editor/history" element={<ImageEditorHistory />} />
+        <Route path="image-studio" element={<ImageStudioLayout />}>
+          <Route index element={<ImageStudioHome />} />
+          <Route path="generating" element={<ImageStudioGenerating />} />
+          <Route path="results" element={<ImageStudioResults />} />
+          <Route path="assets" element={<ImageStudioAssets />} />
+          <Route path="history" element={<ImageStudioHistory />} />
+          <Route path="presets" element={<ImageStudioPresets />} />
         </Route>
 
-        <Route element={<VideoStudioLayout />}>
-          <Route path="video-studio" element={<VideoStudioHome />} />
-          <Route path="video-studio/generating" element={<VideoStudioGenerating />} />
-          <Route path="video-studio/results" element={<VideoStudioResults />} />
-          <Route path="video-studio/frame-to-video" element={<VideoStudioFrameToVideo />} />
-          <Route path="video-studio/history" element={<VideoStudioHistory />} />
-          <Route path="video-studio/library" element={<VideoStudioLibrary />} />
+        <Route path="image-editor" element={<ImageEditorLayout />}>
+          <Route index element={<Navigate to="home" replace />} />
+          <Route path="home" element={<ImageEditorHome />} />
+          <Route path="magic-tools" element={<ImageEditorMagicTools />} />
+          <Route path="generative-fill" element={<ImageEditorGenerativeFill />} />
+          <Route path="upscale" element={<ImageEditorUpscale />} />
+          <Route path="history" element={<ImageEditorHistory />} />
+        </Route>
+
+        <Route path="video-studio" element={<VideoStudioLayout />}>
+          <Route index element={<VideoStudioHome />} />
+          <Route path="generating" element={<VideoStudioGenerating />} />
+          <Route path="results" element={<VideoStudioResults />} />
+          <Route path="frame-to-video" element={<VideoStudioFrameToVideo />} />
+          <Route path="history" element={<VideoStudioHistory />} />
+          <Route path="library" element={<VideoStudioLibrary />} />
         </Route>
 
         <Route element={<SystemPanelLayout />}>
@@ -230,12 +234,12 @@ export default function AppRouter() {
         <Route path="content/images" element={<ContentImagesPage />} />
         <Route path="content/videos" element={<ContentVideosPage />} />
         <Route path="content/reported" element={<ReportedContentPage />} />
-        <Route path="/admin/content/upload" element={<ContentUploadPage />} />
+        <Route path="content/upload" element={<ContentUploadPage />} />
         <Route path="content/:contentId" element={<ContentDetailsPage />} />
 
-        <Route path="/admin/storage/usage" element={<StorageUsagePage />} />
-        <Route path="/admin/storage/buckets" element={<MediaBucketsPage />} />
-        <Route path="/admin/storage/buckets/:bucketId" element={<MediaBucketDetailPage />} />
+        <Route path="storage/usage" element={<StorageUsagePage />} />
+        <Route path="storage/buckets" element={<MediaBucketsPage />} />
+        <Route path="storage/buckets/:bucketId" element={<MediaBucketDetailPage />} />
 
         <Route path="models" element={<ModelsPage />} />
         <Route path="models/analytics" element={<ModelAnalyticsPage />} />
@@ -244,10 +248,8 @@ export default function AppRouter() {
         <Route path="analytics" element={<AnalyticsPage />} />
         <Route path="logs" element={<LogsPage />} />
         <Route path="settings" element={<AdminSettingsPage />} />
-
-        <Route path="/admin/notifications" element={<AdminNotificationsPage />} />
-        <Route path="/admin/profile" element={<AdminProfilePage />} />
-                
+        <Route path="notifications" element={<AdminNotificationsPage />} />
+        <Route path="profile" element={<AdminProfilePage />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />

@@ -1,282 +1,66 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  FolderOpen,
-  Paperclip,
-  Mic,
-  Send,
-  Settings2,
-  Sparkles,
-  SquareTerminal,
-  Database,
-  Grid2X2,
-  Shield,
-  CircleHelp,
   Bot,
+  Check,
+  Code2,
+  FolderOpen,
+  FolderPlus,
+  Image as ImageIcon,
+  LoaderCircle,
+  MessageSquareText,
+  MoreHorizontal,
+  Pencil,
+  Plus,
+  Rabbit,
+  Send,
+  Trash2,
+  X,
   User,
-  ChevronDown,
 } from "lucide-react";
 import {
   listChatThreads,
   createChatThread,
+  updateChatThread,
+  deleteChatThread,
   getChatMessages,
   sendChatMessage,
-  updateChatThread,
+  openRunStream,
 } from "../../../api/chatApi";
-import { listProjects } from "../../../api/projectApi";
+import {
+  listProjects,
+  createProject,
+  updateProject,
+  deleteProject,
+} from "../../../api/projectApi";
 
-const emptySuggestions = [
-  { icon: Sparkles, text: "What is DaVinci Resolve and what is it used for?" },
-  { icon: SquareTerminal, text: "Write a professional email to a client about a delayed project." },
-  { icon: Sparkles, text: "Create a blog outline for an AI productivity article." },
-  { icon: Database, text: "Explain vector databases in simple words." },
-  { icon: Grid2X2, text: "Help me plan features for my AI SaaS app." },
+const CHAT_MODES = [
+  { key: "chat", label: "Chat", icon: MessageSquareText },
+  { key: "code", label: "Code", icon: Code2 },
+  { key: "fast", label: "Fast", icon: Rabbit },
+  { key: "image", label: "Image", icon: ImageIcon },
 ];
 
-function SidebarIcon({ icon: Icon, label, active = false }) {
-  return (
-    <div className="flex flex-col items-center gap-2">
-      <div
-        className={`flex h-10 w-10 items-center justify-center border ${
-          active
-            ? "border-mahi-accent/40 bg-mahi-accent/5 text-mahi-accent shadow-[0_0_14px_rgba(83,245,231,0.12)]"
-            : "border-mahi-outlineVariant/35 bg-black text-white/45"
-        }`}
-      >
-        <Icon size={18} strokeWidth={1.8} />
-      </div>
-      <span
-        className={`text-[8px] font-semibold uppercase tracking-[0.16em] ${
-          active ? "text-mahi-accent" : "text-white/28"
-        }`}
-      >
-        {label}
-      </span>
-    </div>
-  );
-}
+const IMAGE_DEFAULTS = {
+  model: "realvisxl",
+  options: {
+    width: 1024,
+    height: 1024,
+    steps: 30,
+    guidance: 6,
+    quality: "high",
+  },
+};
 
-function EmptySuggestionCard({ item, onSelect }) {
-  const Icon = item.icon;
-
-  return (
-    <button
-      type="button"
-      onClick={() => onSelect(item.text)}
-      className="theme-glass-panel flex aspect-square flex-col justify-between border border-mahi-outlineVariant/25 p-6 text-left transition-all duration-300 hover:border-mahi-accent/45"
-    >
-      <Icon size={18} className="text-mahi-accent/80" strokeWidth={1.8} />
-      <p className="theme-heading text-sm font-medium leading-7 text-white">
-        {item.text}
-      </p>
-    </button>
-  );
-}
-
-function ChatComposer({
-  value,
-  onChange,
-  onSend,
-  disabled = false,
-  placeholder = "Ask anything...",
-}) {
-  function handleKeyDown(event) {
-    if (event.key === "Enter" && !event.shiftKey) {
-      event.preventDefault();
-      onSend();
-    }
-  }
-
-  return (
-    <div className="bg-black">
-      <div className="relative group">
-        <div className="relative flex items-end gap-4 border border-mahi-outlineVariant/30 bg-[#0d0d0d] p-4 transition-all focus-within:border-mahi-accent/45">
-          <textarea
-            value={value}
-            onChange={(e) => onChange(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder={placeholder}
-            rows={1}
-            disabled={disabled}
-            className="custom-scrollbar max-h-40 flex-1 resize-none bg-transparent py-2 text-sm text-white placeholder:text-white/25 outline-none disabled:opacity-60"
-          />
-
-          <div className="flex items-center gap-4 pb-2">
-            <button type="button" className="text-white/35 transition-colors hover:text-white">
-              <Paperclip size={17} />
-            </button>
-            <button type="button" className="text-white/35 transition-colors hover:text-white">
-              <Mic size={17} />
-            </button>
-            <button
-              type="button"
-              onClick={onSend}
-              disabled={disabled}
-              className="flex h-9 w-9 items-center justify-center bg-mahi-accent text-black transition-transform hover:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              <Send size={17} strokeWidth={2.2} />
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function EmptyState({
-  input,
-  setInput,
-  startThread,
-  onSuggestion,
-  projects,
-  selectedProjectId,
-  setSelectedProjectId,
-}) {
-  return (
-    <main className="ml-0 min-h-[calc(100vh-64px)] flex-1 bg-black md:ml-20">
-      <div className="flex min-h-[calc(100vh-64px)] flex-col">
-        <div className="flex flex-1 flex-col items-center justify-center px-6 pb-32 pt-12">
-          <div className="mb-8 max-w-5xl text-center">
-            <h2 className="theme-heading text-5xl font-bold tracking-tight text-white md:text-5xl">
-              What would you like to <span className="text-mahi-accent">create</span> today?
-            </h2>
-            <p className="mx-auto mt-5 max-w-3xl text-sm leading-8 text-white/38">
-              Ask anything. Write, code, explain, brainstorm, or continue work from a project thread.
-            </p>
-          </div>
-
-          <div className="mb-10 flex w-full max-w-5xl justify-center">
-            <div className="flex items-center gap-3 rounded-2xl border border-mahi-outlineVariant/20 bg-[#0f0f0f] px-4 py-3">
-              <FolderOpen size={16} className="text-mahi-accent" />
-              <select
-                value={selectedProjectId}
-                onChange={(e) => setSelectedProjectId(e.target.value)}
-                className="bg-transparent text-sm text-white outline-none"
-              >
-                <option value="">All Projects / General Chat</option>
-                {projects.map((project) => (
-                  <option key={project.id} value={project.id} className="bg-[#111] text-white">
-                    {project.title}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <div className="grid w-full max-w-6xl grid-cols-1 gap-4 md:grid-cols-5">
-            {emptySuggestions.map((item) => (
-              <EmptySuggestionCard key={item.text} item={item} onSelect={onSuggestion} />
-            ))}
-          </div>
-        </div>
-
-        <div className="fixed bottom-0 left-0 right-0 bg-gradient-to-t from-black via-black/95 to-transparent p-5 md:left-24 md:p-8">
-          <div className="mx-auto max-w-5xl">
-            <div className="theme-glass-panel theme-glow-teal rounded-lg border border-mahi-accent/60 p-2">
-              <div className="flex items-center gap-4">
-                <div className="pl-4 text-mahi-accent">
-                  <SquareTerminal size={20} />
-                </div>
-
-                <textarea
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  placeholder="Ask anything..."
-                  rows={1}
-                  className="flex-1 resize-none bg-transparent py-4 text-lg tracking-tight text-white placeholder:text-white/25 outline-none"
-                />
-
-                <div className="flex items-center gap-2 pr-2">
-                  <button type="button" className="p-3 text-white/35 transition-colors hover:text-white">
-                    <Paperclip size={18} />
-                  </button>
-                  <button type="button" className="p-3 text-white/35 transition-colors hover:text-white">
-                    <Mic size={18} />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={startThread}
-                    className="bg-white px-8 py-3 text-sm font-bold uppercase tracking-[0.2em] text-black transition-all hover:bg-mahi-accent"
-                  >
-                    Execute
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-4 flex flex-col gap-3 px-2 text-[10px] uppercase tracking-[0.24em] text-white/35 md:flex-row md:items-center md:justify-between">
-              <div className="flex flex-wrap items-center gap-6">
-                <div className="flex items-center gap-2">
-                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-mahi-accent" />
-                  <span>System Ready</span>
-                </div>
-                <span>Context: 128k_Tokens</span>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-4">
-                <span>Models: MAHI_ULTRA_v4</span>
-                <span className="hidden h-3 w-px bg-white/15 md:block" />
-                <span>Security: ENCRYPTED_TUNNEL</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </main>
-  );
-}
-
-function AssistantMessage({ message, streaming }) {
-  const content = message.content || "";
-  const paragraphs = content ? content.split("\n\n") : [];
-
-  return (
-    <div className="flex gap-6 md:gap-8">
-      <div className="w-8 shrink-0 pt-1">
-        <Bot size={20} className="text-mahi-accent" strokeWidth={1.9} />
-      </div>
-
-      <div className="border-l border-mahi-accent/20 pl-6 md:pl-8">
-        {streaming && (
-          <div className="mb-4 flex items-center gap-3">
-            <div className="relative h-[2px] w-12 overflow-hidden bg-mahi-accent/20">
-              <div className="absolute inset-y-0 w-12 animate-[shimmer_2s_infinite] bg-mahi-accent" />
-            </div>
-            <p className="text-[10px] uppercase tracking-[0.22em] text-mahi-accent">
-              Generating Response...
-            </p>
-          </div>
-        )}
-
-        <div className="space-y-4">
-          {paragraphs.length ? (
-            paragraphs.map((text, index) => (
-              <p key={`${message.id}-${index}`} className="text-sm leading-8 text-white/88 md:text-[15px]">
-                {text}
-              </p>
-            ))
-          ) : (
-            <p className="text-sm leading-8 text-white/50 md:text-[15px]">
-              {streaming ? "Thinking..." : ""}
-            </p>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function UserMessage({ message }) {
-  return (
-    <div className="ml-auto flex max-w-4xl flex-row-reverse gap-6 md:gap-8">
-      <div className="flex w-8 shrink-0 justify-end pt-1">
-        <User size={20} className="text-white" strokeWidth={1.9} />
-      </div>
-
-      <div className="border-r border-white/15 pr-6 text-right md:pr-8">
-        <p className="text-sm leading-8 text-white md:text-[15px]">{message.content}</p>
-      </div>
-    </div>
-  );
+function normalizeMessage(message) {
+  return {
+    id: message.id || `msg-${Math.random().toString(36).slice(2)}`,
+    role: message.role,
+    content: message.content || "",
+    content_json: message.content_json || {},
+    kind: message.kind || "text",
+    status: message.status || "completed",
+    progress: "",
+  };
 }
 
 function formatThreadTime(value) {
@@ -299,239 +83,366 @@ function formatThreadTime(value) {
   return new Date(value).toLocaleDateString();
 }
 
-function groupThreadsByProject(threads, projects) {
-  const projectMap = new Map(projects.map((project) => [project.id, project.title]));
-  const grouped = new Map();
+function buildMessagePayload({ content, mode }) {
+  if (mode === "image") {
+    return {
+      content,
+      mode,
+      model: IMAGE_DEFAULTS.model,
+      options: { ...IMAGE_DEFAULTS.options },
+    };
+  }
 
-  threads.forEach((thread) => {
-    const key = thread.project_id || "general";
-    const label = thread.project_id ? projectMap.get(thread.project_id) || "Unknown Project" : "General";
-    if (!grouped.has(key)) {
-      grouped.set(key, { key, label, items: [] });
-    }
-    grouped.get(key).items.push(thread);
-  });
-
-  return Array.from(grouped.values());
+  return {
+    content,
+    mode,
+  };
 }
 
-function ActiveThread({
-  input,
-  setInput,
-  onSend,
-  messages,
-  threads,
-  projects,
-  selectedProjectId,
-  setSelectedProjectId,
-  activeThreadId,
-  onSelectThread,
-  onCreateNewThread,
-  onMoveThreadToProject,
-  streaming,
-  sending,
-  loadingThreads,
-  error,
-}) {
-  const activeThread = threads.find((thread) => thread.id === activeThreadId);
-  const groupedThreads = groupThreadsByProject(threads, projects);
-
+function ModeSelector({ value, onChange }) {
   return (
-    <div className="flex h-[calc(100vh-64px)] bg-black">
-      <aside className="hidden w-72 shrink-0 border-r border-mahi-outlineVariant/10 bg-[#0e0e0e] lg:flex lg:flex-col">
-        <div className="space-y-4 p-6">
+    <div className="flex flex-wrap items-center gap-2">
+      {CHAT_MODES.map((item) => {
+        const Icon = item.icon;
+        const active = value === item.key;
+
+        return (
           <button
-            onClick={onCreateNewThread}
-            className="w-full border border-mahi-outlineVariant/30 bg-white/[0.02] py-3 text-[10px] font-bold uppercase tracking-[0.2em] text-white transition-all hover:border-mahi-accent/40 hover:bg-mahi-accent/5"
+            key={item.key}
+            type="button"
+            onClick={() => onChange(item.key)}
+            className={`inline-flex items-center gap-2 rounded-2xl border px-3 py-2 text-xs font-medium transition ${
+              active
+                ? "border-mahi-accent/40 bg-mahi-accent/10 text-mahi-accent"
+                : "border-white/10 bg-white/[0.02] text-white/70 hover:text-white"
+            }`}
           >
-            NEW_THREAD
+            <Icon size={14} />
+            {item.label}
           </button>
-
-          <div className="flex items-center gap-2 rounded-xl border border-mahi-outlineVariant/20 bg-[#111111] px-3 py-2">
-            <FolderOpen size={15} className="text-mahi-accent" />
-            <select
-              value={selectedProjectId}
-              onChange={(e) => setSelectedProjectId(e.target.value)}
-              className="w-full bg-transparent text-[11px] uppercase tracking-[0.14em] text-white outline-none"
-            >
-              <option value="">All Threads</option>
-              <option value="general">General Only</option>
-              {projects.map((project) => (
-                <option key={project.id} value={project.id} className="bg-[#111] text-white">
-                  {project.title}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        <div className="custom-scrollbar flex-1 overflow-y-auto px-4 pb-4">
-          {loadingThreads ? (
-            <div className="px-3 py-4 text-xs text-white/45">Loading threads...</div>
-          ) : error ? (
-            <div className="px-3 py-4 text-xs text-red-300">{error}</div>
-          ) : groupedThreads.length ? (
-            groupedThreads.map((group) => (
-              <div key={group.key} className="mb-5">
-                <div className="px-3 pb-2 text-[10px] font-semibold uppercase tracking-[0.22em] text-white/28">
-                  {group.label}
-                </div>
-
-                <div className="space-y-1">
-                  {group.items.map((thread) => {
-                    const active = thread.id === activeThreadId;
-                    return (
-                      <button
-                        key={thread.id}
-                        type="button"
-                        onClick={() => onSelectThread(thread.id)}
-                        className={`w-full rounded-xl p-3 text-left transition-colors ${
-                          active
-                            ? "border-l-2 border-mahi-accent bg-white/[0.04]"
-                            : "border-t border-mahi-outlineVariant/5 hover:bg-white/[0.02]"
-                        }`}
-                      >
-                        <p
-                          className={`truncate text-[11px] tracking-wide ${
-                            active ? "text-white" : "text-white/52"
-                          }`}
-                        >
-                          {thread.title || "New Chat"}
-                        </p>
-                        <p className="mt-1 text-[9px] text-white/28">
-                          {formatThreadTime(thread.last_message_at || thread.created_at)}
-                        </p>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            ))
-          ) : (
-            <div className="px-3 py-4 text-xs text-white/45">No threads found.</div>
-          )}
-        </div>
-      </aside>
-
-      <main className="relative flex min-w-0 flex-1 flex-col bg-black">
-        <div className="flex items-center justify-between border-b border-mahi-outlineVariant/5 px-5 py-5 md:px-10 md:py-6">
-          <div>
-            <h1 className="theme-heading text-x2 font-bold text-white md:text-2xl">
-              {activeThread?.title || "NEW_THREAD"}
-            </h1>
-            <p className="mt-1 text-[10px] uppercase tracking-[0.2em] text-mahi-accent/90">
-              Process: ACTIVE // Thread: {activeThreadId?.slice(0, 8) || "NONE"}
-            </p>
-          </div>
-
-          <div className="hidden items-center gap-3 md:flex">
-            {activeThread && (
-              <div className="flex items-center gap-2 rounded-xl border border-mahi-outlineVariant/20 bg-[#111] px-3 py-2">
-                <FolderOpen size={14} className="text-mahi-accent" />
-                <select
-                  value={activeThread.project_id || ""}
-                  onChange={(e) => onMoveThreadToProject(activeThread.id, e.target.value)}
-                  className="bg-transparent text-[10px] uppercase tracking-[0.16em] text-white outline-none"
-                >
-                  <option value="">General</option>
-                  {projects.map((project) => (
-                    <option key={project.id} value={project.id} className="bg-[#111] text-white">
-                      {project.title}
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown size={12} className="text-white/35" />
-              </div>
-            )}
-
-            <button className="text-[10px] uppercase tracking-[0.16em] text-white/35 transition-colors hover:text-white">
-              Export_Logs
-            </button>
-          </div>
-        </div>
-
-        <div className="custom-scrollbar flex-1 overflow-y-auto px-5 py-8 md:px-10 md:py-12">
-          <div className="mx-auto max-w-5xl space-y-16">
-            {messages.map((message) =>
-              message.role === "assistant" ? (
-                <AssistantMessage
-                  key={message.id}
-                  message={message}
-                  streaming={streaming && message.status === "streaming"}
-                />
-              ) : (
-                <UserMessage key={message.id} message={message} />
-              )
-            )}
-          </div>
-        </div>
-
-        <div className="border-t border-mahi-outlineVariant/10 bg-black px-5 pb-6 pt-4 md:px-10 md:pb-10">
-          <div className="mx-auto max-w-5xl">
-            <ChatComposer
-              value={input}
-              onChange={setInput}
-              onSend={onSend}
-              disabled={sending}
-              placeholder="Ask anything..."
-            />
-
-            <div className="mt-3 flex flex-col gap-3 px-1 text-[9px] uppercase tracking-[0.24em] text-white/28 md:flex-row md:items-center md:justify-between">
-              <div className="flex flex-wrap gap-4">
-                <span>Mode: NEURAL_REASONING</span>
-                <span>Token_Est: {Math.ceil((input?.length || 0) / 4)}/8192</span>
-              </div>
-              <span className="text-mahi-accent/60">
-                {sending || streaming ? "PROCESSING" : "READY_FOR_INPUT"}
-              </span>
-            </div>
-          </div>
-        </div>
-      </main>
-
-      <aside className="hidden w-16 shrink-0 border-l border-mahi-outlineVariant/10 bg-[#0e0e0e] xl:flex xl:flex-col xl:items-center xl:py-8">
-        <div className="flex flex-col items-center gap-2">
-          <div className="h-1 w-1 rounded-full bg-mahi-accent animate-pulse" />
-          <div className="h-1 w-1 rounded-full bg-mahi-accent/50" />
-          <div className="h-1 w-1 rounded-full bg-mahi-accent/20" />
-        </div>
-
-        <div className="mt-12 [writing-mode:vertical-lr]">
-          <span className="text-[9px] uppercase tracking-[0.4em] text-white/24">
-            SYS_LATENCY: 14MS GPU_LOAD: 42%
-          </span>
-        </div>
-
-        <div className="mt-auto pb-4 text-white/30">
-          <CircleHelp size={18} />
-        </div>
-      </aside>
+        );
+      })}
     </div>
   );
 }
 
-function normalizeMessage(message) {
-  return {
-    id: message.id,
-    role: message.role,
-    content: message.content || "",
-    status: message.status || "completed",
-  };
+function Composer({ value, onChange, onSend, disabled, mode }) {
+  function handleKeyDown(event) {
+    if (event.key === "Enter" && !event.shiftKey) {
+      event.preventDefault();
+      onSend();
+    }
+  }
+
+  const placeholder =
+    mode === "code"
+      ? "Ask for code, debugging, refactors..."
+      : mode === "fast"
+      ? "Ask for a quick answer..."
+      : mode === "image"
+      ? "Describe the image you want to generate..."
+      : "Message Mahi AI...";
+
+  return (
+    <div className="border-t border-mahi-outlineVariant/10 bg-[#090909] px-4 py-4 md:px-6">
+      <div className="mx-auto max-w-5xl rounded-3xl border border-mahi-outlineVariant/20 bg-[#111111] p-3">
+        <div className="flex items-end gap-3">
+          <textarea
+            rows={1}
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder={placeholder}
+            disabled={disabled}
+            className="custom-scrollbar max-h-52 min-h-[52px] flex-1 resize-none bg-transparent px-3 py-3 text-sm text-white outline-none placeholder:text-white/30 disabled:opacity-60"
+          />
+
+          <button
+            type="button"
+            onClick={onSend}
+            disabled={disabled || !value.trim()}
+            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-mahi-accent text-black transition hover:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <Send size={18} strokeWidth={2.2} />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AssistantMessage({ message }) {
+  const content = message.content || "";
+  const streaming = message.status === "streaming";
+  const paragraphs = content ? content.split("\n\n") : [];
+  const imageUrl =
+    message.content_json?.imageUrl ||
+    message.content_json?.url ||
+    message.content_json?.output_url ||
+    null;
+
+  return (
+    <div className="flex gap-4">
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-mahi-accent/20 bg-mahi-accent/5">
+        <Bot size={18} className="text-mahi-accent" />
+      </div>
+
+      <div className="min-w-0 flex-1">
+        {streaming && (
+          <div className="mb-3 flex items-center gap-2 text-[11px] uppercase tracking-[0.18em] text-mahi-accent/80">
+            <LoaderCircle size={12} className="animate-spin" />
+            {message.progress || "Typing"}
+          </div>
+        )}
+
+        {imageUrl ? (
+          <div className="overflow-hidden rounded-3xl border border-white/10 bg-white/[0.03] p-3">
+            <img
+              src={imageUrl}
+              alt="Generated"
+              className="w-full rounded-2xl object-cover"
+            />
+
+            {(message.content_json?.model ||
+              message.content_json?.width ||
+              message.content_json?.height ||
+              message.content_json?.steps) && (
+              <div className="mt-3 flex flex-wrap gap-2 text-[11px] text-white/45">
+                {message.content_json?.model ? (
+                  <span className="rounded-full border border-white/10 px-2 py-1">
+                    {message.content_json.model}
+                  </span>
+                ) : null}
+                {message.content_json?.width && message.content_json?.height ? (
+                  <span className="rounded-full border border-white/10 px-2 py-1">
+                    {message.content_json.width}×{message.content_json.height}
+                  </span>
+                ) : null}
+                {message.content_json?.steps ? (
+                  <span className="rounded-full border border-white/10 px-2 py-1">
+                    {message.content_json.steps} steps
+                  </span>
+                ) : null}
+                {message.content_json?.quality ? (
+                  <span className="rounded-full border border-white/10 px-2 py-1">
+                    {message.content_json.quality}
+                  </span>
+                ) : null}
+              </div>
+            )}
+
+            {content ? (
+              <p className="mt-3 whitespace-pre-wrap text-[14px] leading-7 text-white/80">
+                {content}
+              </p>
+            ) : null}
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {paragraphs.length ? (
+              paragraphs.map((text, index) => (
+                <p
+                  key={`${message.id}-${index}`}
+                  className="whitespace-pre-wrap text-[15px] leading-8 text-white/90"
+                >
+                  {text}
+                </p>
+              ))
+            ) : (
+              <p className="text-[15px] leading-8 text-white/50">
+                {streaming ? message.progress || "Thinking..." : ""}
+              </p>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function UserMessage({ message }) {
+  return (
+    <div className="ml-auto flex max-w-4xl flex-row-reverse gap-4">
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.03]">
+        <User size={18} className="text-white" />
+      </div>
+
+      <div className="rounded-3xl border border-white/10 bg-white/[0.03] px-5 py-4">
+        <p className="whitespace-pre-wrap text-[15px] leading-8 text-white">
+          {message.content}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function ProjectManagerModal({
+  open,
+  onClose,
+  projects,
+  onCreate,
+  onRename,
+  onDelete,
+}) {
+  const [newName, setNewName] = useState("");
+  const [editingId, setEditingId] = useState(null);
+  const [editingName, setEditingName] = useState("");
+
+  useEffect(() => {
+    if (!open) {
+      setNewName("");
+      setEditingId(null);
+      setEditingName("");
+    }
+  }, [open]);
+
+  if (!open) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+      <div className="w-full max-w-2xl rounded-[28px] border border-mahi-outlineVariant/20 bg-[#101010] p-6 shadow-2xl">
+        <div className="mb-6 flex items-center justify-between">
+          <div>
+            <h3 className="theme-heading text-2xl font-bold text-white">
+              Manage Projects
+            </h3>
+            <p className="mt-1 text-sm text-white/45">
+              Create, rename, and delete projects.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-xl border border-white/10 p-2 text-white/60 hover:text-white"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="mb-6 flex gap-3">
+          <input
+            value={newName}
+            onChange={(e) => setNewName(e.target.value)}
+            placeholder="New project name"
+            className="h-12 flex-1 rounded-2xl border border-white/10 bg-black/40 px-4 text-sm text-white outline-none placeholder:text-white/25"
+          />
+          <button
+            type="button"
+            onClick={async () => {
+              const value = newName.trim();
+              if (!value) return;
+              await onCreate(value);
+              setNewName("");
+            }}
+            className="inline-flex h-12 items-center gap-2 rounded-2xl bg-mahi-accent px-5 text-sm font-semibold text-black"
+          >
+            <Plus size={16} />
+            Create
+          </button>
+        </div>
+
+        <div className="space-y-3">
+          {projects.map((project) => (
+            <div
+              key={project.id}
+              className="flex items-center gap-3 rounded-2xl border border-white/10 bg-black/30 px-4 py-3"
+            >
+              <FolderOpen size={16} className="text-mahi-accent" />
+
+              {editingId === project.id ? (
+                <input
+                  value={editingName}
+                  onChange={(e) => setEditingName(e.target.value)}
+                  className="h-10 flex-1 rounded-xl border border-white/10 bg-black/40 px-3 text-sm text-white outline-none"
+                />
+              ) : (
+                <div className="flex-1 text-sm text-white">
+                  {project.name || project.title}
+                </div>
+              )}
+
+              {editingId === project.id ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      const value = editingName.trim();
+                      if (!value) return;
+                      await onRename(project.id, value);
+                      setEditingId(null);
+                      setEditingName("");
+                    }}
+                    className="rounded-xl border border-mahi-accent/20 p-2 text-mahi-accent"
+                  >
+                    <Check size={16} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditingId(null);
+                      setEditingName("");
+                    }}
+                    className="rounded-xl border border-white/10 p-2 text-white/60"
+                  >
+                    <X size={16} />
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditingId(project.id);
+                      setEditingName(project.name || project.title || "");
+                    }}
+                    className="rounded-xl border border-white/10 p-2 text-white/70 hover:text-white"
+                  >
+                    <Pencil size={16} />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => onDelete(project.id)}
+                    className="rounded-xl border border-red-500/20 p-2 text-red-300 hover:text-red-200"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </>
+              )}
+            </div>
+          ))}
+
+          {!projects.length && (
+            <div className="rounded-2xl border border-dashed border-white/10 px-4 py-8 text-center text-sm text-white/40">
+              No projects yet.
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export default function ChatPage() {
   const [mode, setMode] = useState("empty");
+  const [activeMode, setActiveMode] = useState("chat");
   const [input, setInput] = useState("");
   const [threads, setThreads] = useState([]);
   const [projects, setProjects] = useState([]);
   const [selectedProjectId, setSelectedProjectId] = useState("");
   const [activeThreadId, setActiveThreadId] = useState(null);
   const [messages, setMessages] = useState([]);
-  const [streaming, setStreaming] = useState(false);
   const [sending, setSending] = useState(false);
   const [loadingThreads, setLoadingThreads] = useState(true);
   const [error, setError] = useState("");
-  const pollIntervalRef = useRef(null);
+  const [threadMenuId, setThreadMenuId] = useState(null);
+  const [renamingThreadId, setRenamingThreadId] = useState(null);
+  const [renameValue, setRenameValue] = useState("");
+  const [projectModalOpen, setProjectModalOpen] = useState(false);
+
+  const streamRef = useRef(null);
+  const messagesEndRef = useRef(null);
 
   const filteredThreads = useMemo(() => {
     if (!selectedProjectId) return threads;
@@ -541,7 +452,25 @@ export default function ChatPage() {
     return threads.filter((thread) => thread.project_id === selectedProjectId);
   }, [threads, selectedProjectId]);
 
-  async function loadProjects() {
+  const activeThread = useMemo(
+    () => threads.find((thread) => thread.id === activeThreadId) || null,
+    [threads, activeThreadId]
+  );
+
+  function closeStream() {
+    if (streamRef.current) {
+      streamRef.current.close();
+      streamRef.current = null;
+    }
+  }
+
+  function scrollToBottom() {
+    requestAnimationFrame(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+    });
+  }
+
+  async function loadProjectsList() {
     try {
       const data = await listProjects();
       setProjects(data);
@@ -597,43 +526,14 @@ export default function ChatPage() {
     const data = await getChatMessages(threadId);
     const normalized = data.map(normalizeMessage);
     setMessages(normalized);
-
-    const hasStreaming = normalized.some(
-      (item) => item.role === "assistant" && item.status === "streaming"
-    );
-    setStreaming(hasStreaming);
     return normalized;
   }
 
-  function stopPolling() {
-    if (pollIntervalRef.current) {
-      window.clearInterval(pollIntervalRef.current);
-      pollIntervalRef.current = null;
-    }
-  }
-
-  function startPolling(threadId) {
-    stopPolling();
-
-    pollIntervalRef.current = window.setInterval(async () => {
-      const freshMessages = await loadMessages(threadId);
-      const stillStreaming = freshMessages.some(
-        (item) => item.role === "assistant" && item.status === "streaming"
-      );
-
-      if (!stillStreaming) {
-        stopPolling();
-        setStreaming(false);
-        await loadThreads(threadId);
-      }
-    }, 1500);
-  }
-
   useEffect(() => {
-    loadProjects();
+    loadProjectsList();
     loadThreads();
 
-    return () => stopPolling();
+    return () => closeStream();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -648,35 +548,234 @@ export default function ChatPage() {
     }
   }, [activeThreadId]);
 
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  useEffect(() => {
+    if (activeThread?.mode) {
+      setActiveMode(activeThread.mode);
+    }
+  }, [activeThread]);
+
+  async function handleCreateProject(name) {
+    await createProject({ name });
+    await loadProjectsList();
+  }
+
+  async function handleRenameProject(projectId, name) {
+    await updateProject(projectId, { name });
+    await loadProjectsList();
+    await loadThreads(activeThreadId, selectedProjectId);
+  }
+
+  async function handleDeleteProject(projectId) {
+    await deleteProject(projectId);
+
+    if (selectedProjectId === projectId) {
+      setSelectedProjectId("");
+    }
+
+    await loadProjectsList();
+    await loadThreads(activeThreadId, selectedProjectId === projectId ? "" : selectedProjectId);
+  }
+
   async function handleCreateNewThread() {
+    closeStream();
     setMode("empty");
     setActiveThreadId(null);
     setMessages([]);
     setInput("");
-    setStreaming(false);
-    stopPolling();
+    setThreadMenuId(null);
   }
 
   async function handleSelectThread(threadId) {
+    closeStream();
+    setThreadMenuId(null);
     setActiveThreadId(threadId);
     setMode("thread");
     await loadMessages(threadId);
   }
 
   async function handleMoveThreadToProject(threadId, projectId) {
-    try {
-      await updateChatThread(threadId, {
-        projectId: projectId || null,
-      });
+    await updateChatThread(threadId, {
+      projectId: projectId || null,
+    });
 
-      const nextProjectFilter = selectedProjectId === "general" && projectId ? "" : selectedProjectId;
-      if (nextProjectFilter !== selectedProjectId) {
-        setSelectedProjectId(nextProjectFilter);
-      }
-      await loadThreads(threadId, nextProjectFilter);
-    } catch (err) {
-      console.error("Failed to move thread:", err);
+    setThreadMenuId(null);
+
+    const nextProjectFilter =
+      selectedProjectId === "general" && projectId ? "" : selectedProjectId;
+
+    if (nextProjectFilter !== selectedProjectId) {
+      setSelectedProjectId(nextProjectFilter);
     }
+
+    await loadThreads(threadId, nextProjectFilter);
+  }
+
+  async function handleRenameThread(threadId, title) {
+    const value = title.trim();
+    if (!value) return;
+
+    await updateChatThread(threadId, { title: value });
+    setRenamingThreadId(null);
+    setRenameValue("");
+    await loadThreads(threadId, selectedProjectId);
+  }
+
+  async function handleDeleteThread(threadId) {
+    await deleteChatThread(threadId);
+    setThreadMenuId(null);
+
+    const remaining = filteredThreads.filter((thread) => thread.id !== threadId);
+    const nextThreadId = remaining[0]?.id || null;
+
+    if (activeThreadId === threadId) {
+      setActiveThreadId(nextThreadId);
+      if (nextThreadId) {
+        await loadMessages(nextThreadId);
+        setMode("thread");
+      } else {
+        setMessages([]);
+        setMode("empty");
+      }
+    }
+
+    await loadThreads(nextThreadId, selectedProjectId);
+  }
+
+  function startRunStream(threadId, runId, assistantMessageId) {
+    closeStream();
+
+    const source = openRunStream(threadId, runId);
+    streamRef.current = source;
+
+    source.addEventListener("ready", (event) => {
+      try {
+        const payload = JSON.parse(event.data);
+
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg.id === assistantMessageId
+              ? {
+                  ...msg,
+                  status: "streaming",
+                  progress: payload.message || "Preparing answer",
+                  content: msg.content || "",
+                }
+              : msg
+          )
+        );
+      } catch (err) {
+        console.error("Ready stream parse error:", err);
+      }
+    });
+
+    source.addEventListener("progress", (event) => {
+      try {
+        const payload = JSON.parse(event.data);
+
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg.id === assistantMessageId
+              ? {
+                  ...msg,
+                  status: "streaming",
+                  progress: payload.message || "Working...",
+                }
+              : msg
+          )
+        );
+      } catch (err) {
+        console.error("Progress stream parse error:", err);
+      }
+    });
+
+    source.addEventListener("delta", (event) => {
+      try {
+        const payload = JSON.parse(event.data);
+
+        if (payload.type !== "delta" || !payload.token) return;
+
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg.id === assistantMessageId
+              ? {
+                  ...msg,
+                  content: (msg.content || "") + payload.token,
+                  status: "streaming",
+                  progress: "Typing",
+                }
+              : msg
+          )
+        );
+      } catch (err) {
+        console.error("Delta stream parse error:", err);
+      }
+    });
+
+    source.addEventListener("complete", async (event) => {
+      try {
+        const payload = JSON.parse(event.data);
+
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg.id === assistantMessageId
+              ? {
+                  ...msg,
+                  content: payload.content ?? msg.content,
+                  content_json: payload.contentJson ?? msg.content_json,
+                  status: "completed",
+                  progress: "",
+                }
+              : msg
+          )
+        );
+      } catch (err) {
+        console.error("Complete stream parse error:", err);
+      } finally {
+        closeStream();
+        await loadMessages(threadId);
+        await loadThreads(threadId, selectedProjectId);
+        setSending(false);
+      }
+    });
+
+    source.addEventListener("error", async (event) => {
+      try {
+        if (event?.data) {
+          const payload = JSON.parse(event.data);
+
+          setMessages((prev) =>
+            prev.map((msg) =>
+              msg.id === assistantMessageId
+                ? {
+                    ...msg,
+                    content: payload.message || "Something went wrong.",
+                    status: "failed",
+                    progress: "",
+                  }
+                : msg
+            )
+          );
+        }
+      } catch (err) {
+        console.error("Error stream parse error:", err);
+      } finally {
+        closeStream();
+        await loadMessages(threadId);
+        await loadThreads(threadId, selectedProjectId);
+        setSending(false);
+      }
+    });
+
+    source.onerror = async () => {
+      closeStream();
+      await loadMessages(threadId);
+      await loadThreads(threadId, selectedProjectId);
+      setSending(false);
+    };
   }
 
   async function startThread() {
@@ -687,30 +786,42 @@ export default function ChatPage() {
       setSending(true);
 
       const thread = await createChatThread({
-        title: trimmed.slice(0, 60),
-        mode: "chat",
-        projectId: selectedProjectId && selectedProjectId !== "general" ? selectedProjectId : null,
+        title: trimmed.slice(0, 80),
+        mode: activeMode,
+        projectId:
+          selectedProjectId && selectedProjectId !== "general"
+            ? selectedProjectId
+            : null,
       });
 
       setActiveThreadId(thread.id);
       setMode("thread");
 
-      const result = await sendChatMessage(thread.id, {
-        content: trimmed,
-      });
+      const result = await sendChatMessage(
+        thread.id,
+        buildMessagePayload({
+          content: trimmed,
+          mode: activeMode,
+        })
+      );
 
       setInput("");
       setMessages([
         normalizeMessage(result.userMessage),
         normalizeMessage(result.assistantMessage),
       ]);
-      setStreaming(true);
-      startPolling(thread.id);
-      await loadThreads(thread.id);
+
+      await loadThreads(thread.id, selectedProjectId);
+
+      if (result.run?.id && result.assistantMessage?.id) {
+        startRunStream(thread.id, result.run.id, result.assistantMessage.id);
+      } else {
+        await loadMessages(thread.id);
+        setSending(false);
+      }
     } catch (err) {
       console.error("Failed to start thread:", err);
       setError("Unable to start a new chat.");
-    } finally {
       setSending(false);
     }
   }
@@ -729,95 +840,311 @@ export default function ChatPage() {
         status: "completed",
       };
 
-      const optimisticAssistant = {
-        id: `temp-assistant-${Date.now()}`,
-        role: "assistant",
-        content: "",
-        status: "streaming",
-      };
-
-      setMessages((prev) => [...prev, optimisticUser, optimisticAssistant]);
+      setMessages((prev) => [...prev, optimisticUser]);
       setInput("");
-      setStreaming(true);
 
-      const result = await sendChatMessage(activeThreadId, {
-        content: trimmed,
-      });
+      const result = await sendChatMessage(
+        activeThreadId,
+        buildMessagePayload({
+          content: trimmed,
+          mode: activeMode,
+        })
+      );
 
       setMessages((prev) => {
-        const cleaned = prev.filter((item) => !String(item.id).startsWith("temp-"));
+        const withoutTempUser = prev.filter((item) => item.id !== optimisticUser.id);
         return [
-          ...cleaned,
+          ...withoutTempUser,
           normalizeMessage(result.userMessage),
           normalizeMessage(result.assistantMessage),
         ];
       });
 
-      startPolling(activeThreadId);
-      await loadThreads(activeThreadId);
+      await loadThreads(activeThreadId, selectedProjectId);
+
+      if (result.run?.id && result.assistantMessage?.id) {
+        startRunStream(activeThreadId, result.run.id, result.assistantMessage.id);
+      } else {
+        await loadMessages(activeThreadId);
+        setSending(false);
+      }
     } catch (err) {
       console.error("Failed to send message:", err);
-      setStreaming(false);
-      await loadMessages(activeThreadId);
-    } finally {
       setSending(false);
+      await loadMessages(activeThreadId);
     }
   }
 
-  function handleSuggestion(text) {
-    setInput(text);
-  }
+  const onSend = mode === "empty" ? startThread : sendInThread;
 
   return (
-    <div className="relative">
-      <div className="fixed bottom-6 left-5 z-30 hidden flex-col gap-5 md:flex md:left-6 md:top-24 md:bottom-auto">
-        <SidebarIcon icon={Sparkles} label="Thread" active />
-        <SidebarIcon icon={Database} label="Mem" />
-        <SidebarIcon icon={Grid2X2} label="Grid" />
-        <SidebarIcon icon={SquareTerminal} label="Logs" />
-      </div>
+    <div className="flex h-[calc(100vh-64px)] bg-black">
+      <aside className="hidden w-80 shrink-0 border-r border-mahi-outlineVariant/10 bg-[#0b0b0b] lg:flex lg:flex-col">
+        <div className="border-b border-mahi-outlineVariant/10 p-5">
+          <div className="mb-4 flex items-center justify-between">
+            <div>
+              <h2 className="theme-heading text-xl font-bold text-white">Chats</h2>
+              <p className="mt-1 text-xs text-white/40">Organize by project</p>
+            </div>
 
-      <div className="fixed bottom-6 left-5 z-30 hidden flex-col gap-5 md:flex md:left-6 md:bottom-6 md:top-auto">
-        <div className="text-white/30">
-          <Shield size={18} />
-        </div>
-        <div className="text-white/30">
-          <Settings2 size={18} />
-        </div>
-        <div className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full border border-mahi-outlineVariant/35 bg-[#121212] text-[11px] font-bold text-mahi-accent">
-          A
-        </div>
-      </div>
+            <button
+              type="button"
+              onClick={() => setProjectModalOpen(true)}
+              className="inline-flex items-center gap-2 rounded-xl border border-white/10 px-3 py-2 text-xs text-white/70 hover:text-white"
+            >
+              <FolderPlus size={15} />
+              Projects
+            </button>
+          </div>
 
-      {mode === "empty" ? (
-        <EmptyState
-          input={input}
-          setInput={setInput}
-          startThread={startThread}
-          onSuggestion={handleSuggestion}
-          projects={projects}
-          selectedProjectId={selectedProjectId}
-          setSelectedProjectId={setSelectedProjectId}
+          <button
+            type="button"
+            onClick={handleCreateNewThread}
+            className="mb-4 flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-mahi-accent text-sm font-semibold text-black"
+          >
+            <Plus size={16} />
+            New chat
+          </button>
+
+          <div className="flex items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.02] px-3">
+            <FolderOpen size={15} className="text-mahi-accent" />
+            <select
+              value={selectedProjectId}
+              onChange={(e) => setSelectedProjectId(e.target.value)}
+              className="h-12 w-full bg-transparent text-sm text-white outline-none"
+            >
+              <option value="">All threads</option>
+              <option value="general">General only</option>
+              {projects.map((project) => (
+                <option
+                  key={project.id}
+                  value={project.id}
+                  className="bg-[#111111] text-white"
+                >
+                  {project.name || project.title}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div className="custom-scrollbar flex-1 overflow-y-auto p-3">
+          {loadingThreads ? (
+            <div className="px-3 py-4 text-sm text-white/45">Loading threads...</div>
+          ) : error ? (
+            <div className="px-3 py-4 text-sm text-red-300">{error}</div>
+          ) : filteredThreads.length ? (
+            <div className="space-y-2">
+              {filteredThreads.map((thread) => {
+                const active = thread.id === activeThreadId;
+                const isRenaming = renamingThreadId === thread.id;
+
+                return (
+                  <div
+                    key={thread.id}
+                    className={`relative rounded-2xl border ${
+                      active
+                        ? "border-mahi-accent/30 bg-mahi-accent/5"
+                        : "border-white/5 bg-white/[0.02]"
+                    }`}
+                  >
+                    <div className="flex items-start gap-2 p-3">
+                      <button
+                        type="button"
+                        onClick={() => handleSelectThread(thread.id)}
+                        className="min-w-0 flex-1 text-left"
+                      >
+                        {isRenaming ? (
+                          <input
+                            autoFocus
+                            value={renameValue}
+                            onChange={(e) => setRenameValue(e.target.value)}
+                            onBlur={() => handleRenameThread(thread.id, renameValue)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                handleRenameThread(thread.id, renameValue);
+                              }
+                            }}
+                            className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white outline-none"
+                          />
+                        ) : (
+                          <>
+                            <p className="truncate text-sm font-medium text-white">
+                              {thread.title || "New Chat"}
+                            </p>
+                            <p className="mt-1 text-xs text-white/35">
+                              {formatThreadTime(thread.last_message_at || thread.created_at)}
+                            </p>
+                          </>
+                        )}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setThreadMenuId((prev) => (prev === thread.id ? null : thread.id))
+                        }
+                        className="rounded-xl border border-white/10 p-2 text-white/55 hover:text-white"
+                      >
+                        <MoreHorizontal size={16} />
+                      </button>
+                    </div>
+
+                    {threadMenuId === thread.id && (
+                      <div className="absolute right-3 top-12 z-20 w-56 rounded-2xl border border-white/10 bg-[#111111] p-2 shadow-xl">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setRenamingThreadId(thread.id);
+                            setRenameValue(thread.title || "");
+                            setThreadMenuId(null);
+                          }}
+                          className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm text-white/80 hover:bg-white/[0.04]"
+                        >
+                          <Pencil size={15} />
+                          Rename
+                        </button>
+
+                        <div className="my-2 border-t border-white/10" />
+
+                        <div className="px-3 pb-2 pt-1 text-[11px] uppercase tracking-[0.14em] text-white/35">
+                          Move to project
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => handleMoveThreadToProject(thread.id, "")}
+                          className="block w-full rounded-xl px-3 py-2 text-left text-sm text-white/80 hover:bg-white/[0.04]"
+                        >
+                          General
+                        </button>
+
+                        {projects.map((project) => (
+                          <button
+                            key={project.id}
+                            type="button"
+                            onClick={() => handleMoveThreadToProject(thread.id, project.id)}
+                            className="block w-full rounded-xl px-3 py-2 text-left text-sm text-white/80 hover:bg-white/[0.04]"
+                          >
+                            {project.name || project.title}
+                          </button>
+                        ))}
+
+                        <div className="my-2 border-t border-white/10" />
+
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteThread(thread.id)}
+                          className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm text-red-300 hover:bg-red-500/10"
+                        >
+                          <Trash2 size={15} />
+                          Delete
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="px-3 py-6 text-sm text-white/45">No threads found.</div>
+          )}
+        </div>
+      </aside>
+
+      <main className="flex min-w-0 flex-1 flex-col">
+        <div className="border-b border-mahi-outlineVariant/10 bg-[#0b0b0b] px-4 py-4 md:px-6">
+          <div className="mx-auto max-w-5xl space-y-4">
+            <div className="flex items-center justify-between gap-4">
+              <div className="min-w-0">
+                <h1 className="truncate theme-heading text-2xl font-bold text-white">
+                  {activeThread?.title || "New chat"}
+                </h1>
+                <p className="mt-1 text-sm text-white/40">
+                  {activeThread?.project_id
+                    ? projects.find((item) => item.id === activeThread.project_id)?.name ||
+                      "Project thread"
+                    : "General chat"}
+                </p>
+              </div>
+
+              <div className="hidden md:block">
+                <select
+                  value={selectedProjectId}
+                  onChange={(e) => setSelectedProjectId(e.target.value)}
+                  className="h-11 rounded-2xl border border-white/10 bg-white/[0.02] px-4 text-sm text-white outline-none"
+                >
+                  <option value="">All threads</option>
+                  <option value="general">General only</option>
+                  {projects.map((project) => (
+                    <option key={project.id} value={project.id} className="bg-[#111111] text-white">
+                      {project.name || project.title}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <ModeSelector value={activeMode} onChange={setActiveMode} />
+          </div>
+        </div>
+
+        <div className="custom-scrollbar flex-1 overflow-y-auto px-4 py-6 md:px-6 md:py-8">
+          <div className="mx-auto max-w-5xl space-y-8">
+            {mode === "empty" && !messages.length ? (
+              <div className="flex min-h-[55vh] flex-col items-center justify-center text-center">
+                <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-3xl border border-mahi-accent/20 bg-mahi-accent/5">
+                  <Bot size={28} className="text-mahi-accent" />
+                </div>
+                <h2 className="theme-heading text-4xl font-bold text-white">
+                  What do you want to create today?
+                </h2>
+                <p className="mt-4 max-w-2xl text-sm leading-7 text-white/45">
+                  One workspace for chat, code, fast answers, and image generation.
+                </p>
+              </div>
+            ) : (
+              <>
+                {messages.map((message) =>
+                  message.role === "assistant" ? (
+                    <AssistantMessage key={message.id} message={message} />
+                  ) : (
+                    <UserMessage key={message.id} message={message} />
+                  )
+                )}
+                <div ref={messagesEndRef} />
+              </>
+            )}
+          </div>
+        </div>
+
+        <Composer
+          value={input}
+          onChange={setInput}
+          onSend={onSend}
+          disabled={sending || (mode === "thread" && !activeThreadId)}
+          mode={activeMode}
         />
-      ) : (
-        <ActiveThread
-          input={input}
-          setInput={setInput}
-          onSend={sendInThread}
-          messages={messages}
-          threads={filteredThreads}
-          projects={projects}
-          selectedProjectId={selectedProjectId}
-          setSelectedProjectId={setSelectedProjectId}
-          activeThreadId={activeThreadId}
-          onSelectThread={handleSelectThread}
-          onCreateNewThread={handleCreateNewThread}
-          onMoveThreadToProject={handleMoveThreadToProject}
-          streaming={streaming}
-          sending={sending}
-          loadingThreads={loadingThreads}
-          error={error}
-        />
+      </main>
+
+      <ProjectManagerModal
+        open={projectModalOpen}
+        onClose={() => setProjectModalOpen(false)}
+        projects={projects}
+        onCreate={handleCreateProject}
+        onRename={handleRenameProject}
+        onDelete={handleDeleteProject}
+      />
+
+      {sending && (
+        <div className="fixed right-6 top-24 z-40 hidden items-center gap-2 rounded-full border border-mahi-accent/20 bg-[#111]/90 px-4 py-2 text-xs text-white/85 shadow-lg md:flex">
+          <LoaderCircle size={14} className="animate-spin text-mahi-accent" />
+          <span>
+            {activeMode === "image"
+              ? "Generating RealVisXL image..."
+              : "Generating..."}
+          </span>
+        </div>
       )}
     </div>
   );

@@ -3,6 +3,8 @@ import { requireAuth } from "../../middlewares/auth.middleware.js";
 import {
   listThreads,
   createThread,
+  updateThread,
+  deleteThread,
   getThreadMessages,
   createMessage,
   streamRun,
@@ -12,6 +14,8 @@ const router = Router();
 
 router.get("/threads", requireAuth, listThreads);
 router.post("/threads", requireAuth, createThread);
+router.patch("/threads/:threadId", requireAuth, updateThread);
+router.delete("/threads/:threadId", requireAuth, deleteThread);
 router.get("/threads/:threadId/messages", requireAuth, getThreadMessages);
 router.post("/threads/:threadId/messages", requireAuth, createMessage);
 router.get("/threads/:threadId/stream/:runId", requireAuth, streamRun);
