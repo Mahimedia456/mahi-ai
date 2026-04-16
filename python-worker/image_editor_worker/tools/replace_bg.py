@@ -9,12 +9,15 @@ from .remove_bg import remove_background
 def generate_background_from_image_worker(prompt: str, width: int, height: int) -> Image.Image:
     payload = {
         "prompt": prompt,
-        "width": min(width, 1024),
-        "height": min(height, 1024),
-        "steps": 22,
-        "guidance": 6.5,
+        "width": min(max(width, 512), 1024),
+        "height": min(max(height, 512), 1024),
+        "steps": 26,
+        "guidance": 7.0,
         "quality": "high",
-        "negativePrompt": "person, portrait, man, woman, face, subject, human, watermark, text, logo, cropped object",
+        "negativePrompt": (
+            "person, portrait, man, woman, face, subject, human, watermark, text, logo, "
+            "cropped object, duplicate subject"
+        ),
     }
 
     response = requests.post(
@@ -37,7 +40,7 @@ def generate_background_from_image_worker(prompt: str, width: int, height: int) 
 
 
 def composite_subject_over_background(subject_rgba: Image.Image, background_rgba: Image.Image) -> Image.Image:
-    bg = background_rgba.convert("RGBA").resize(subject_rgba.size)
+    bg = background_rgba.convert("RGBA").resize(subject_rgba.size, Image.LANCZOS)
     return Image.alpha_composite(bg, subject_rgba)
 
 
@@ -51,8 +54,9 @@ def replace_background(
     subject = remove_background(input_image)
 
     background_prompt = (
-        prompt
-        or "luxury outdoor garden area, cinematic premium portrait background, natural sunlight, high detail"
+        prompt.strip()
+        if prompt and prompt.strip()
+        else "luxury outdoor garden area, cinematic premium portrait background, natural sunlight, high detail"
     )
 
     background = generate_background_from_image_worker(

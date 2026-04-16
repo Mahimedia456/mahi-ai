@@ -67,12 +67,13 @@ def edit_image(payload: EditRequest):
         elif payload.tool_type == "generative_fill":
             if not mask:
                 raise HTTPException(status_code=400, detail="mask_url required for generative_fill")
+
             result = generative_fill(
                 input_image=source,
                 mask_image=mask,
-                prompt=payload.prompt or "",
+                prompt=payload.prompt or "high quality realistic seamless fill",
                 negative_prompt=payload.negative_prompt,
-                strength=payload.strength or 0.7,
+                strength=payload.strength or 0.72,
             )
 
         elif payload.tool_type == "replace_background":
@@ -87,21 +88,25 @@ def edit_image(payload: EditRequest):
         elif payload.tool_type == "add_object":
             if not mask:
                 raise HTTPException(status_code=400, detail="mask_url required for add_object")
+
             result = generative_fill(
                 input_image=source,
                 mask_image=mask,
                 prompt=payload.prompt or "realistic object inserted naturally with correct perspective, lighting, and shadows",
-                negative_prompt=payload.negative_prompt or "distorted object, floating object, blur, duplicate, bad perspective, watermark",
-                strength=payload.strength or 0.78,
+                negative_prompt=payload.negative_prompt or (
+                    "distorted object, floating object, blur, duplicate, bad perspective, watermark, text"
+                ),
+                strength=payload.strength or 0.8,
             )
 
         elif payload.tool_type == "erase_element":
             if not mask:
                 raise HTTPException(status_code=400, detail="mask_url required for erase_element")
+
             result = erase_object(
                 input_image=source,
                 mask_image=mask,
-                strength=payload.strength or 0.78,
+                strength=payload.strength or 0.82,
             )
 
         elif payload.tool_type == "upscale":
