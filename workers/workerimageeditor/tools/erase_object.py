@@ -1,4 +1,4 @@
-from .generative_fill import generative_fill
+from workerimageeditor.tools.generative_fill import generative_fill
 
 
 def erase_object(

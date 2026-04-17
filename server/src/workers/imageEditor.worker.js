@@ -1,16 +1,16 @@
 import crypto from "crypto";
 import axios from "axios";
 import { Worker } from "bullmq";
-import { env } from "../../config/env.js";
-import { redisConnection } from "../../queue/redis.js";
-import { supabaseAdmin } from "../../lib/supabaseAdmin.js";
+import { env } from "../config/env.js";
+import { redisConnection } from "../queue/redis.js";
+import { supabaseAdmin } from "../lib/supabaseAdmin.js";
 import {
   createSignedReadUrl,
   getInternalJob,
   markJobCompleted,
   markJobFailed,
   markJobProcessing,
-} from "./imageEditor.service.js";
+} from "../modules/image-editor/imageEditor.service.js";
 
 async function withRetry(fn, retries = 3, delayMs = 700) {
   let lastError;
@@ -62,6 +62,10 @@ export function startImageEditorWorker() {
       }
 
       try {
+        console.log(
+          `[IMAGE_EDITOR_WORKER] processing job=${jobId} tool=${dbJob.tool_type}`
+        );
+
         await markJobProcessing(jobId);
 
         const inputUrl = await createSignedReadUrl(dbJob.input_path);
@@ -75,24 +79,30 @@ export function startImageEditorWorker() {
         const outputUpload = await createResultUploadUrl(outputPath);
         const previewUpload = await createResultUploadUrl(previewPath);
 
+        const payload = {
+          job_id: dbJob.id,
+          tool_type: dbJob.tool_type,
+          prompt: dbJob.prompt,
+          negative_prompt: dbJob.negative_prompt,
+          input_url: inputUrl,
+          mask_url: maskUrl,
+          strength: dbJob.strength,
+          scale_factor: dbJob.scale_factor,
+          face_enhance: dbJob.face_enhance,
+          denoise: dbJob.denoise,
+          meta: dbJob.meta || {},
+          output_upload: outputUpload,
+          preview_upload: previewUpload,
+          bucket: env.imageEditorBucket,
+        };
+
+        console.log(
+          `[IMAGE_EDITOR_WORKER] calling editor tool=${dbJob.tool_type} editor=${env.pythonImageEditorUrl}`
+        );
+
         const response = await axios.post(
           `${env.pythonImageEditorUrl}/edit`,
-          {
-            job_id: dbJob.id,
-            tool_type: dbJob.tool_type,
-            prompt: dbJob.prompt,
-            negative_prompt: dbJob.negative_prompt,
-            input_url: inputUrl,
-            mask_url: maskUrl,
-            strength: dbJob.strength,
-            scale_factor: dbJob.scale_factor,
-            face_enhance: dbJob.face_enhance,
-            denoise: dbJob.denoise,
-            meta: dbJob.meta || {},
-            output_upload: outputUpload,
-            preview_upload: previewUpload,
-            bucket: env.imageEditorBucket,
-          },
+          payload,
           {
             timeout: 0,
           }
@@ -104,6 +114,10 @@ export function startImageEditorWorker() {
           meta: response.data?.meta || {},
         });
 
+        console.log(
+          `[IMAGE_EDITOR_WORKER] completed job=${jobId} tool=${dbJob.tool_type}`
+        );
+
         return { success: true };
       } catch (error) {
         const detail =
@@ -112,12 +126,18 @@ export function startImageEditorWorker() {
           error.message ||
           "Image editor processing failed";
 
-        console.error("[IMAGE_EDITOR_WORKER] error:", detail);
+        console.error(
+          `[IMAGE_EDITOR_WORKER] error job=${jobId} tool=${dbJob?.tool_type}:`,
+          detail
+        );
 
         try {
           await markJobFailed(jobId, detail);
         } catch (updateError) {
-          console.error("[IMAGE_EDITOR_WORKER] failed to mark job failed:", updateError.message);
+          console.error(
+            "[IMAGE_EDITOR_WORKER] failed to mark job failed:",
+            updateError.message
+          );
         }
 
         throw error;
@@ -130,11 +150,11 @@ export function startImageEditorWorker() {
   );
 
   worker.on("completed", (job) => {
-    console.log(`[IMAGE_EDITOR_WORKER] completed job ${job.id}`);
+    console.log(`[IMAGE_EDITOR_WORKER] completed queue job ${job.id}`);
   });
 
   worker.on("failed", (job, err) => {
-    console.error(`[IMAGE_EDITOR_WORKER] failed job ${job?.id}`, err.message);
+    console.error(`[IMAGE_EDITOR_WORKER] failed queue job ${job?.id}`, err.message);
   });
 
   return worker;

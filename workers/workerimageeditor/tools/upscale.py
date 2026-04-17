@@ -1,5 +1,6 @@
 from PIL import Image, ImageFilter, ImageEnhance
 
+
 def upscale_image(
     input_image: Image.Image,
     scale_factor: int = 2,
@@ -18,7 +19,6 @@ def upscale_image(
         scaled = scaled.filter(ImageFilter.MedianFilter(size=3))
         scaled = scaled.filter(ImageFilter.SMOOTH_MORE)
 
-    # Make visible difference
     scaled = scaled.filter(ImageFilter.UnsharpMask(radius=1.8, percent=180, threshold=2))
 
     if face_enhance:

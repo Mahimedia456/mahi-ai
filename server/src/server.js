@@ -1,7 +1,7 @@
 import app from "./app.js";
 import { env } from "./config/env.js";
 import { testDatabaseConnection } from "./config/db.js";
-import { startImageEditorWorker } from "./modules/image-editor/imageEditor.worker.js";
+import { startImageEditorWorker } from "./workers/imageEditor.worker.js";
 
 async function startServer() {
   try {

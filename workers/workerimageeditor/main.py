@@ -5,18 +5,18 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from typing import Optional, Any
 
-from utils import (
+from workerimageeditor.utils import (
     download_image,
     image_to_png_bytes,
     resize_preview,
     upload_bytes_signed,
 )
-from tools.remove_bg import remove_background
-from tools.upscale import upscale_image
-from tools.generative_fill import generative_fill
-from tools.replace_bg import replace_background
-from tools.erase_object import erase_object
-from config import Settings
+from workerimageeditor.tools.remove_bg import remove_background
+from workerimageeditor.tools.upscale import upscale_image
+from workerimageeditor.tools.generative_fill import generative_fill
+from workerimageeditor.tools.replace_bg import replace_background
+from workerimageeditor.tools.erase_object import erase_object
+from workerimageeditor.config import Settings
 
 app = FastAPI(title="Mahi AI Image Editor Worker")
 
@@ -51,7 +51,6 @@ def health():
         "device": Settings.DEVICE,
         "remove_bg_model": Settings.RMBG_MODEL,
         "inpaint_model": Settings.INPAINT_MODEL,
-        "python_image_url": Settings.PYTHON_IMAGE_URL,
     }
 
 

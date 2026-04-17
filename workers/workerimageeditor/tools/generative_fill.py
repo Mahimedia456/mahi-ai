@@ -1,7 +1,8 @@
 import torch
 from PIL import Image, ImageFilter
 from diffusers import StableDiffusionInpaintPipeline
-from config import Settings
+
+from workerimageeditor.config import Settings
 
 _pipe = None
 _pipe_device = None
@@ -24,7 +25,6 @@ def _normalize_size(image: Image.Image) -> Image.Image:
     new_w = max(512, (w // 8) * 8)
     new_h = max(512, (h // 8) * 8)
 
-    # keep aspect, but make valid multiples of 8
     if new_w != w or new_h != h:
         return image.resize((new_w, new_h), Image.LANCZOS)
     return image
@@ -43,16 +43,10 @@ def build_pipe(device: str):
 
     pipe = pipe.to(device)
 
-    if device == "cuda":
-        try:
-            pipe.enable_attention_slicing()
-        except Exception:
-            pass
-    else:
-        try:
-            pipe.enable_attention_slicing()
-        except Exception:
-            pass
+    try:
+        pipe.enable_attention_slicing()
+    except Exception:
+        pass
 
     return pipe
 
@@ -99,11 +93,11 @@ def generative_fill(
 
     pipe, device = get_pipe()
 
-    generator = None
-    if device == "cuda":
-        generator = torch.Generator(device=device).manual_seed(42)
-    else:
-        generator = torch.Generator().manual_seed(42)
+    generator = (
+        torch.Generator(device=device).manual_seed(42)
+        if device == "cuda"
+        else torch.Generator().manual_seed(42)
+    )
 
     final_negative = negative_prompt or (
         "low quality, blur, distorted, duplicate, artifacts, text, watermark, "
