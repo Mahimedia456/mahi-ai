@@ -1,5 +1,11 @@
 import { NavLink, Outlet } from "react-router-dom";
-import { Sparkles, Wand2, FolderKanban, History, SlidersHorizontal } from "lucide-react";
+import {
+  Sparkles,
+  Wand2,
+  FolderKanban,
+  History,
+  SlidersHorizontal,
+} from "lucide-react";
 
 const navItems = [
   { label: "Create", to: ".", end: true, icon: Sparkles },

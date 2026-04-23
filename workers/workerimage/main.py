@@ -1,5 +1,6 @@
 import os
 import sys
+import warnings
 
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 WORKERS_DIR = os.path.dirname(CURRENT_DIR)
@@ -7,12 +8,24 @@ WORKERS_DIR = os.path.dirname(CURRENT_DIR)
 if WORKERS_DIR not in sys.path:
     sys.path.insert(0, WORKERS_DIR)
 
+warnings.filterwarnings(
+    "ignore",
+    message=".*Siglip2ImageProcessorFast.*",
+)
+
 from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 from typing import Optional
 
-from workerimage.generator import OUTPUT_DIR, device, dtype, model_manager, generate_image_internal, save_generated_image
+from workerimage.generator import (
+    OUTPUT_DIR,
+    device,
+    dtype,
+    model_manager,
+    generate_image_internal,
+    save_generated_image,
+)
 from workerimage.config import settings
 
 app = FastAPI(title="Mahi AI Image Worker - RealVisXL")

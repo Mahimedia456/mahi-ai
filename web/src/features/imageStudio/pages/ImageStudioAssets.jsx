@@ -1,11 +1,30 @@
-const assets = [
-  { name: "Night_City_Seed_01.png", type: "PNG", size: "4.2 MB" },
-  { name: "Moodboard_CyberFashion.jpg", type: "JPG", size: "2.1 MB" },
-  { name: "Prompt_Vector_Master.txt", type: "TXT", size: "12 KB" },
-  { name: "Aesthetic_Reference_Set.zip", type: "ZIP", size: "48 MB" },
-];
+import { useEffect, useState } from "react";
+import { fetchImageStudioAssets } from "../../../api/imageStudio.api";
+
+function prettyBytes(size) {
+  if (!size) return "—";
+
+  const units = ["B", "KB", "MB", "GB"];
+  let value = size;
+  let unit = 0;
+
+  while (value >= 1024 && unit < units.length - 1) {
+    value /= 1024;
+    unit += 1;
+  }
+
+  return `${value.toFixed(1)} ${units[unit]}`;
+}
 
 export default function ImageStudioAssets() {
+  const [assets, setAssets] = useState([]);
+
+  useEffect(() => {
+    fetchImageStudioAssets()
+      .then(setAssets)
+      .catch(console.error);
+  }, []);
+
   return (
     <div className="min-h-[calc(100vh-64px)] p-8">
       <div className="mb-10">
@@ -20,7 +39,7 @@ export default function ImageStudioAssets() {
       <div className="border border-mahi-outlineVariant/30">
         {assets.map((asset, index) => (
           <div
-            key={asset.name}
+            key={asset.id}
             className={`grid grid-cols-[1fr_auto_auto] items-center gap-4 px-6 py-5 ${
               index !== assets.length - 1 ? "border-b border-mahi-outlineVariant/20" : ""
             }`}
@@ -31,13 +50,20 @@ export default function ImageStudioAssets() {
                 Studio Asset
               </p>
             </div>
+
             <span className="text-[10px] uppercase tracking-[0.2em] text-mahi-accent">
-              {asset.type}
+              {asset.asset_type}
             </span>
-            <span className="text-sm text-white/35">{asset.size}</span>
+            <span className="text-sm text-white/35">{prettyBytes(asset.file_size_bytes)}</span>
           </div>
         ))}
       </div>
+
+      {!assets.length ? (
+        <div className="mt-16 text-center text-sm text-white/40">
+          No assets available.
+        </div>
+      ) : null}
     </div>
   );
 }

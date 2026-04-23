@@ -77,6 +77,8 @@ export const env = {
   pythonIngestUrl: process.env.PYTHON_INGEST_URL || "http://127.0.0.1:8300",
   pythonImageEditorUrl:
     process.env.PYTHON_IMAGE_EDITOR_URL || "http://127.0.0.1:8010",
+  imageStudioWorkerUrl:
+    process.env.IMAGE_STUDIO_WORKER_URL || "http://127.0.0.1:8400",
 
   serperApiKey: process.env.SERPER_API_KEY || "",
   maxSearchResults: toNumber(process.env.MAX_SEARCH_RESULTS, 2),

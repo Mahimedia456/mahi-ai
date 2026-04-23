@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Image as ImageIcon,
@@ -7,16 +7,21 @@ import {
   Hash,
   SlidersHorizontal,
 } from "lucide-react";
+import { useImageStudio } from "../context/ImageStudioContext";
+import {
+  createImageStudioJob,
+  fetchImageStudioPresets,
+} from "../../../api/imageStudio.api";
 
 const aspectOptions = ["1:1", "4:5", "16:9", "9:16"];
-const sampleOptions = ["01", "02", "04", "08"];
+const sampleOptions = [1, 2, 4, 8];
 const styles = [
-  "Realistic",
-  "Cinematic",
-  "Digital Art",
-  "Illustration",
-  "3D Render",
-  "Anime",
+  { label: "Realistic", value: "realistic" },
+  { label: "Cinematic", value: "cinematic" },
+  { label: "Digital Art", value: "digital-art" },
+  { label: "Illustration", value: "digital-art" },
+  { label: "3D Render", value: "realistic" },
+  { label: "Anime", value: "anime" },
 ];
 
 const promptChips = [
@@ -30,22 +35,84 @@ const promptChips = [
 
 export default function ImageStudioHome() {
   const navigate = useNavigate();
+  const {
+    form,
+    setForm,
+    setCurrentJobId,
+    setCurrentJob,
+    setSelectedPreset,
+  } = useImageStudio();
 
-  const [prompt, setPrompt] = useState("");
-  const [negativePrompt, setNegativePrompt] = useState("");
-  const [selectedAspect, setSelectedAspect] = useState("1:1");
-  const [selectedSamples, setSelectedSamples] = useState("01");
-  const [selectedStyle, setSelectedStyle] = useState("Cinematic");
+  const [presets, setPresets] = useState([]);
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    fetchImageStudioPresets()
+      .then(setPresets)
+      .catch(console.error);
+  }, []);
 
   function appendChip(value) {
-    setPrompt((prev) => (prev ? `${prev}, ${value}` : value));
+    setForm((prev) => ({
+      ...prev,
+      prompt: prev.prompt ? `${prev.prompt}, ${value}` : value,
+    }));
+  }
+
+  function applyPreset(preset) {
+    setSelectedPreset(preset);
+    setForm((prev) => ({
+      ...prev,
+      presetId: preset.id,
+      styleKey: preset.style_key,
+      aspectRatio: preset.default_aspect_ratio,
+      steps: preset.default_steps,
+      guidanceScale: Number(preset.default_guidance),
+      entropy: Number(preset.default_strength),
+      sampleCount: preset.default_sample_count,
+      negativePrompt: preset.negative_prompt || prev.negativePrompt,
+      prompt: preset.prompt_prefix
+        ? `${preset.prompt_prefix}${prev.prompt ? `, ${prev.prompt}` : ""}`
+        : prev.prompt,
+    }));
+  }
+
+  async function handleSubmit() {
+    if (!form.prompt.trim()) return;
+
+    try {
+      setSubmitting(true);
+
+      const job = await createImageStudioJob({
+        title: form.title,
+        prompt: form.prompt,
+        negativePrompt: form.negativePrompt,
+        exclusionPrompt: form.exclusionPrompt,
+        aspectRatio: form.aspectRatio,
+        sampleCount: form.sampleCount,
+        styleKey: form.styleKey,
+        fidelityLevel: form.fidelityLevel,
+        entropy: form.entropy,
+        seed: form.seed ? Number(form.seed) : null,
+        steps: Number(form.steps),
+        guidanceScale: Number(form.guidanceScale),
+        presetId: form.presetId,
+      });
+
+      setCurrentJobId(job.id);
+      setCurrentJob(job);
+      navigate("/app/image-studio/generating");
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
     <div className="flex h-[calc(100vh-64px)] flex-col xl:flex-row">
       <section className="w-full shrink-0 border-r border-mahi-outlineVariant/30 p-8 xl:w-[380px] xl:overflow-y-auto">
         <div className="space-y-9">
-          {/* INPUT PANEL */}
           <div className="space-y-5">
             <div className="flex items-start gap-3">
               <div className="mt-1 flex h-10 w-10 items-center justify-center border border-mahi-accent/35 bg-mahi-accent/5 text-mahi-accent">
@@ -57,9 +124,8 @@ export default function ImageStudioHome() {
                   Input Sequence
                 </label>
                 <p className="mt-2 max-w-[290px] text-[11px] leading-6 text-white/35">
-                  Build the primary visual directive for neural synthesis. Use
-                  descriptive cinematic language, materials, lighting, mood, and
-                  composition.
+                  Build the primary visual directive for neural synthesis. Use descriptive cinematic language,
+                  materials, lighting, mood, and composition.
                 </p>
               </div>
             </div>
@@ -74,15 +140,20 @@ export default function ImageStudioHome() {
                 </div>
 
                 <span className="text-[10px] uppercase tracking-[0.2em] text-white/25">
-                  {prompt.length}/500
+                  {form.prompt.length}/500
                 </span>
               </div>
 
               <textarea
                 className="h-40 w-full resize-none bg-transparent px-4 py-4 text-[13px] leading-7 text-white placeholder:text-white/18 outline-none"
-                placeholder="Describe the image you want to generate...&#10;Example: Hyper-realistic luxury perfume bottle on reflective black glass, cyan rim lighting, floating particles, cinematic shadows, ultra detailed..."
-                value={prompt}
-                onChange={(e) => setPrompt(e.target.value)}
+                placeholder="Describe the image you want to generate..."
+                value={form.prompt}
+                onChange={(e) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    prompt: e.target.value,
+                  }))
+                }
               />
             </div>
 
@@ -109,8 +180,13 @@ export default function ImageStudioHome() {
 
               <input
                 type="text"
-                value={negativePrompt}
-                onChange={(e) => setNegativePrompt(e.target.value)}
+                value={form.negativePrompt}
+                onChange={(e) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    negativePrompt: e.target.value,
+                  }))
+                }
                 className="w-full bg-transparent px-4 py-4 text-[12px] text-white placeholder:text-white/18 outline-none"
                 placeholder="Blur, low quality, distortion, extra objects, bad anatomy..."
               />
@@ -126,7 +202,13 @@ export default function ImageStudioHome() {
                 </div>
                 <input
                   type="text"
-                  defaultValue="842913"
+                  value={form.seed}
+                  onChange={(e) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      seed: e.target.value,
+                    }))
+                  }
                   className="w-full bg-transparent text-sm text-white outline-none"
                 />
               </div>
@@ -139,15 +221,20 @@ export default function ImageStudioHome() {
                   </span>
                 </div>
                 <input
-                  type="text"
-                  defaultValue="50"
+                  type="number"
+                  value={form.steps}
+                  onChange={(e) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      steps: e.target.value,
+                    }))
+                  }
                   className="w-full bg-transparent text-sm text-white outline-none"
                 />
               </div>
             </div>
           </div>
 
-          {/* ASPECT */}
           <div>
             <label className="mb-4 block text-[10px] font-bold uppercase tracking-[0.2em] text-mahi-accent">
               Aspect Grid
@@ -158,9 +245,14 @@ export default function ImageStudioHome() {
                 <button
                   key={option}
                   type="button"
-                  onClick={() => setSelectedAspect(option)}
+                  onClick={() =>
+                    setForm((prev) => ({
+                      ...prev,
+                      aspectRatio: option,
+                    }))
+                  }
                   className={`bg-black p-5 text-center text-[10px] uppercase tracking-[0.16em] transition-all ${
-                    selectedAspect === option
+                    form.aspectRatio === option
                       ? "border border-mahi-accent text-mahi-accent shadow-[0_0_14px_rgba(83,245,231,0.12)]"
                       : "text-white/35 hover:text-mahi-accent"
                   }`}
@@ -184,7 +276,6 @@ export default function ImageStudioHome() {
             </div>
           </div>
 
-          {/* SAMPLE COUNT */}
           <div>
             <label className="mb-4 block text-[10px] font-bold uppercase tracking-[0.2em] text-mahi-accent">
               Sample Count
@@ -194,32 +285,50 @@ export default function ImageStudioHome() {
                 <button
                   key={option}
                   type="button"
-                  onClick={() => setSelectedSamples(option)}
+                  onClick={() =>
+                    setForm((prev) => ({
+                      ...prev,
+                      sampleCount: option,
+                    }))
+                  }
                   className={`py-3 text-[10px] font-mono transition-all ${
-                    selectedSamples === option
+                    form.sampleCount === option
                       ? "bg-mahi-accent text-black"
                       : "text-white/35 hover:text-mahi-accent"
                   }`}
                 >
-                  {option}
+                  {String(option).padStart(2, "0")}
                 </button>
               ))}
             </div>
           </div>
 
-          {/* FIDELITY */}
           <div>
             <label className="mb-4 block text-[10px] font-bold uppercase tracking-[0.2em] text-mahi-accent">
               Fidelity Level
             </label>
-            <select className="w-full border border-mahi-accent bg-transparent p-3 text-[10px] uppercase tracking-[0.16em] text-white outline-none">
-              <option className="bg-black">STANDARD_01</option>
-              <option className="bg-black">HIGH_DEF_02</option>
-              <option className="bg-black">ULTRA_RES_03</option>
+            <select
+              value={form.fidelityLevel}
+              onChange={(e) =>
+                setForm((prev) => ({
+                  ...prev,
+                  fidelityLevel: e.target.value,
+                }))
+              }
+              className="w-full border border-mahi-accent bg-transparent p-3 text-[10px] uppercase tracking-[0.16em] text-white outline-none"
+            >
+              <option className="bg-black" value="STANDARD_01">
+                STANDARD_01
+              </option>
+              <option className="bg-black" value="HIGH_DEF_02">
+                HIGH_DEF_02
+              </option>
+              <option className="bg-black" value="ULTRA_RES_03">
+                ULTRA_RES_03
+              </option>
             </select>
           </div>
 
-          {/* STYLE */}
           <div>
             <label className="mb-4 block text-[10px] font-bold uppercase tracking-[0.2em] text-mahi-accent">
               Artistic Profile
@@ -227,65 +336,98 @@ export default function ImageStudioHome() {
             <div className="grid grid-cols-2 gap-px border border-mahi-accent/30 bg-mahi-accent/20">
               {styles.map((style) => (
                 <button
-                  key={style}
+                  key={style.label}
                   type="button"
-                  onClick={() => setSelectedStyle(style)}
+                  onClick={() =>
+                    setForm((prev) => ({
+                      ...prev,
+                      styleKey: style.value,
+                    }))
+                  }
                   className={`bg-black px-3 py-4 text-[10px] uppercase tracking-[0.16em] transition-all ${
-                    selectedStyle === style
+                    form.styleKey === style.value
                       ? "border border-mahi-accent text-mahi-accent"
                       : "text-white/35 hover:text-mahi-accent"
                   }`}
                 >
-                  {style}
+                  {style.label}
                 </button>
               ))}
             </div>
           </div>
 
-          {/* ENTROPY */}
           <div>
             <div className="mb-4 flex items-center justify-between">
               <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-mahi-accent">
                 Entropy Control
               </label>
-              <span className="text-[10px] font-mono text-mahi-accent">0.75</span>
+              <span className="text-[10px] font-mono text-mahi-accent">
+                {Number(form.entropy).toFixed(2)}
+              </span>
             </div>
 
-            <div className="relative h-px bg-white/20">
-              <div className="absolute left-0 top-0 h-px w-3/4 bg-mahi-accent" />
-              <div className="absolute left-3/4 top-1/2 h-2 w-2 -translate-y-1/2 rotate-45 border border-mahi-accent bg-black" />
-            </div>
-
-            <div className="mt-3 flex justify-between text-[8px] uppercase tracking-[0.2em] text-white/30">
-              <span>Minimal</span>
-              <span>Extreme</span>
-            </div>
+            <input
+              type="range"
+              min="0"
+              max="1"
+              step="0.01"
+              value={form.entropy}
+              onChange={(e) =>
+                setForm((prev) => ({
+                  ...prev,
+                  entropy: Number(e.target.value),
+                }))
+              }
+              className="w-full"
+            />
           </div>
 
-          {/* EXCLUSION */}
           <div className="border-t border-mahi-outlineVariant/25 pt-6">
             <div className="mb-4 flex items-center justify-between">
               <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-mahi-accent">
                 Exclusion Filter
               </label>
-              <div className="relative h-4 w-10 border border-mahi-accent/50">
-                <div className="absolute right-0 top-0 h-full w-1/2 bg-mahi-accent" />
-              </div>
             </div>
 
             <input
               className="w-full border border-mahi-accent bg-transparent p-3 text-[10px] text-white placeholder:text-white/20 outline-none"
               placeholder="Specify objects for omission..."
+              value={form.exclusionPrompt}
+              onChange={(e) =>
+                setForm((prev) => ({
+                  ...prev,
+                  exclusionPrompt: e.target.value,
+                }))
+              }
             />
           </div>
 
-          {/* CTA */}
+          <div>
+            <label className="mb-4 block text-[10px] font-bold uppercase tracking-[0.2em] text-mahi-accent">
+              Presets
+            </label>
+
+            <div className="grid grid-cols-1 gap-2">
+              {presets.map((preset) => (
+                <button
+                  key={preset.id}
+                  type="button"
+                  onClick={() => applyPreset(preset)}
+                  className="border border-mahi-outlineVariant/25 bg-black/40 px-4 py-3 text-left text-[11px] font-semibold text-white/80 transition-all hover:border-mahi-accent/40 hover:bg-mahi-accent/[0.03]"
+                >
+                  {preset.name}
+                </button>
+              ))}
+            </div>
+          </div>
+
           <button
             type="button"
-            onClick={() => navigate("/app/image-studio/generating")}
-            className="w-full border border-mahi-accent bg-black py-5 text-[12px] font-bold uppercase tracking-[0.28em] text-mahi-accent transition-all hover:bg-mahi-accent hover:text-black"
+            disabled={submitting || !form.prompt.trim()}
+            onClick={handleSubmit}
+            className="w-full border border-mahi-accent bg-black py-5 text-[12px] font-bold uppercase tracking-[0.28em] text-mahi-accent transition-all hover:bg-mahi-accent hover:text-black disabled:cursor-not-allowed disabled:opacity-50"
           >
-            Initialize Synthesis
+            {submitting ? "Launching..." : "Initialize Synthesis"}
           </button>
         </div>
       </section>
@@ -299,6 +441,7 @@ export default function ImageStudioHome() {
             backgroundSize: "40px 40px",
           }}
         />
+
         <div className="relative z-10 max-w-lg px-8 text-center">
           <div className="mx-auto mb-12 flex h-32 w-32 rotate-45 items-center justify-center border border-mahi-accent shadow-[0_0_30px_rgba(83,245,231,0.10)]">
             <ImageIcon size={46} className="-rotate-45 text-mahi-accent" />

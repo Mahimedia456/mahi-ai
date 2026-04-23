@@ -1,11 +1,17 @@
+from typing import Any, cast
+import random
+
 import torch
 from PIL import Image, ImageFilter
-from diffusers import StableDiffusionInpaintPipeline
+from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion_inpaint import (
+    StableDiffusionInpaintPipeline,
+)
 
 from workerimageeditor.config import Settings
 
 _pipe = None
 _pipe_device = None
+RESAMPLE = Image.Resampling.LANCZOS
 
 
 def _best_device() -> str:
@@ -22,11 +28,13 @@ def _best_dtype(device: str):
 
 def _normalize_size(image: Image.Image) -> Image.Image:
     w, h = image.size
-    new_w = max(512, (w // 8) * 8)
-    new_h = max(512, (h // 8) * 8)
+
+    new_w = max(512, int(round(w / 8) * 8))
+    new_h = max(512, int(round(h / 8) * 8))
 
     if new_w != w or new_h != h:
-        return image.resize((new_w, new_h), Image.LANCZOS)
+        return image.resize((new_w, new_h), RESAMPLE)
+
     return image
 
 
@@ -47,6 +55,12 @@ def build_pipe(device: str):
         pipe.enable_attention_slicing()
     except Exception:
         pass
+
+    if device == "cuda":
+        try:
+            pipe.enable_xformers_memory_efficient_attention()
+        except Exception:
+            pass
 
     return pipe
 
@@ -72,9 +86,83 @@ def rebuild_cpu_pipe():
 
 def prepare_mask(mask_image: Image.Image) -> Image.Image:
     mask = mask_image.convert("L")
-    mask = mask.filter(ImageFilter.MaxFilter(size=15))
-    mask = mask.filter(ImageFilter.GaussianBlur(radius=3))
+    mask = mask.filter(ImageFilter.MaxFilter(size=21))
+    mask = mask.filter(ImageFilter.GaussianBlur(radius=3.2))
     return mask
+
+
+def _build_negative_prompt(user_negative: str | None = None) -> str:
+    base = (
+        "low quality, blur, distorted, duplicate, artifacts, text, watermark, "
+        "bad anatomy, extra limbs, extra fingers, malformed face, deformed body, "
+        "unchanged masked area, empty masked area, invisible object, weak change"
+    )
+
+    extra = (user_negative or "").strip()
+    if extra:
+        return f"{extra}, {base}"
+
+    return base
+
+
+def _extract_first_image(output: Any) -> Image.Image:
+    if hasattr(output, "images"):
+        images = getattr(output, "images")
+        if isinstance(images, list) and len(images) > 0 and isinstance(images[0], Image.Image):
+            return cast(Image.Image, images[0])
+
+    if isinstance(output, tuple) and len(output) > 0:
+        first = output[0]
+        if isinstance(first, list) and len(first) > 0 and isinstance(first[0], Image.Image):
+            return cast(Image.Image, first[0])
+        if isinstance(first, Image.Image):
+            return cast(Image.Image, first)
+
+    if isinstance(output, list) and len(output) > 0:
+        first = output[0]
+        if isinstance(first, Image.Image):
+            return cast(Image.Image, first)
+
+    if isinstance(output, Image.Image):
+        return cast(Image.Image, output)
+
+    raise RuntimeError("Inpainting pipeline did not return a valid PIL image output")
+
+
+def _prepare_for_change(
+    image: Image.Image,
+    mask: Image.Image,
+) -> Image.Image:
+    """
+    Masked area ko lightly disturb karte hain taa ke model original
+    pixels ko preserve na kare aur visible change kare.
+    """
+    base = image.convert("RGB")
+    mask_l = mask.convert("L")
+
+    disturbed = base.copy()
+
+    px = disturbed.load()
+    mpx = mask_l.load()
+
+    if px is None or mpx is None:
+        return image.convert("RGB")
+
+    w, h = disturbed.size
+
+    for y in range(h):
+        for x in range(w):
+            mv = mpx[x, y]
+            mv = int(mv[0] if isinstance(mv, tuple) else mv)
+            if mv > 150:
+                px[x, y] = (
+                    random.randint(75, 185),
+                    random.randint(75, 185),
+                    random.randint(75, 185),
+                )
+
+    disturbed = disturbed.filter(ImageFilter.GaussianBlur(radius=1.4))
+    return disturbed
 
 
 def generative_fill(
@@ -82,14 +170,18 @@ def generative_fill(
     mask_image: Image.Image,
     prompt: str,
     negative_prompt: str | None = None,
-    strength: float = 0.72,
+    strength: float = 0.86,
 ) -> Image.Image:
-    image = input_image.convert("RGB")
-    mask = prepare_mask(mask_image)
+    original_image = input_image.convert("RGB")
+    prepared_mask = prepare_mask(mask_image)
 
-    original_size = image.size
-    image = _normalize_size(image)
-    mask = mask.resize(image.size, Image.LANCZOS)
+    original_size = original_image.size
+
+    working_image = _normalize_size(original_image)
+    working_mask = prepared_mask.resize(working_image.size, RESAMPLE)
+
+    # Force visible change in masked area
+    prepared_image = _prepare_for_change(working_image, working_mask)
 
     pipe, device = get_pipe()
 
@@ -99,22 +191,25 @@ def generative_fill(
         else torch.Generator().manual_seed(42)
     )
 
-    final_negative = negative_prompt or (
-        "low quality, blur, distorted, duplicate, artifacts, text, watermark, "
-        "bad anatomy, extra limbs, extra fingers, malformed face, deformed body"
-    )
+    final_prompt = (prompt or "").strip()
+    if not final_prompt:
+        final_prompt = "high quality realistic visible edit in the masked area"
+
+    final_negative = _build_negative_prompt(negative_prompt)
+    final_strength = max(0.82, min(float(strength), 0.95))
 
     try:
-        result = pipe(
-            prompt=(prompt or "").strip(),
+        output = pipe(
+            prompt=final_prompt,
             negative_prompt=final_negative,
-            image=image,
-            mask_image=mask,
-            strength=max(0.65, min(float(strength), 0.9)),
+            image=prepared_image,
+            mask_image=working_mask,
+            strength=final_strength,
             guidance_scale=Settings.INPAINT_GUIDANCE,
             num_inference_steps=Settings.INPAINT_STEPS,
             generator=generator,
-        ).images[0]
+        )
+        result: Image.Image = _extract_first_image(output)
 
     except RuntimeError as exc:
         if "CUDA" not in str(exc).upper():
@@ -125,16 +220,17 @@ def generative_fill(
 
         pipe, _device = rebuild_cpu_pipe()
 
-        result = pipe(
-            prompt=(prompt or "").strip(),
+        output = pipe(
+            prompt=final_prompt,
             negative_prompt=final_negative,
-            image=image,
-            mask_image=mask,
-            strength=max(0.65, min(float(strength), 0.9)),
+            image=prepared_image,
+            mask_image=working_mask,
+            strength=final_strength,
             guidance_scale=Settings.INPAINT_GUIDANCE,
             num_inference_steps=Settings.INPAINT_STEPS,
             generator=torch.Generator().manual_seed(42),
-        ).images[0]
+        )
+        result = _extract_first_image(output)
 
-    result = result.resize(original_size, Image.LANCZOS)
+    result = result.resize(original_size, RESAMPLE)
     return result.convert("RGBA")

@@ -3,19 +3,20 @@
   "private": true,
   "version": "1.0.0",
   "scripts": {
-    "dev": "concurrently -n WEB,SERVER,CHATWORKER,IMAGEWORKER,IMGEDITOR -c cyan,green,yellow,blue,magenta \"npm run dev:web\" \"npm run dev:server\" \"npm run dev:workerchat\" \"npm run dev:workerimage\" \"npm run dev:workerimageeditor\"",
+    "dev": "concurrently -n WEB,SERVER,CHATWORKER,IMAGEWORKER,IMGEDITOR,IMGSTUDIO -c cyan,green,yellow,blue,magenta,white \"npm run dev:web\" \"npm run dev:server\" \"npm run dev:workerchat\" \"npm run dev:workerimage\" \"npm run dev:workerimageeditor\" \"npm run dev:workerimagestudio\"",
     "dev:web": "npm --prefix web run dev",
     "dev:server": "npm --prefix server run dev",
     "dev:workerchat": "cmd /c \"cd /d workers\\workerchat && ..\\.venv\\Scripts\\python.exe -m uvicorn main:app --host 127.0.0.1 --port 8100 --reload\"",
     "dev:workerimage": "cmd /c \"cd /d workers\\workerimage && ..\\.venv\\Scripts\\python.exe -m uvicorn main:app --host 127.0.0.1 --port 8200 --reload\"",
-    "dev:workerimageeditor": "cmd /c \"cd /d workers\\workerimageeditor && ..\\.venv\\Scripts\\python.exe -m uvicorn main:app --host 127.0.0.1 --port 8010 --reload\"",
-
-    "start": "concurrently -n WEB,SERVER,CHATWORKER,IMAGEWORKER,IMGEDITOR -c cyan,green,yellow,blue,magenta \"npm run start:web\" \"npm run start:server\" \"npm run start:workerchat\" \"npm run start:workerimage\" \"npm run start:workerimageeditor\"",
+    "dev:workerimageeditor": "cmd /c \"cd /d workers\\workerimageeditor && ..\\.venv\\Scripts\\python.exe -m uvicorn main:app --host 127.0.0.1 --port 8010\"",
+    "dev:workerimagestudio": "cmd /c \"cd /d workers\\workerimagestudio && ..\\.venv\\Scripts\\python.exe -m uvicorn main:app --host 127.0.0.1 --port 8400 --reload\"",
+    "start": "concurrently -n WEB,SERVER,CHATWORKER,IMAGEWORKER,IMGEDITOR,IMGSTUDIO -c cyan,green,yellow,blue,magenta,white \"npm run start:web\" \"npm run start:server\" \"npm run start:workerchat\" \"npm run start:workerimage\" \"npm run start:workerimageeditor\" \"npm run start:workerimagestudio\"",
     "start:web": "npm --prefix web run preview",
     "start:server": "npm --prefix server run start",
     "start:workerchat": "cmd /c \"cd /d workers\\workerchat && ..\\.venv\\Scripts\\python.exe -m uvicorn main:app --host 127.0.0.1 --port 8100\"",
     "start:workerimage": "cmd /c \"cd /d workers\\workerimage && ..\\.venv\\Scripts\\python.exe -m uvicorn main:app --host 127.0.0.1 --port 8200\"",
-    "start:workerimageeditor": "cmd /c \"cd /d workers\\workerimageeditor && ..\\.venv\\Scripts\\python.exe -m uvicorn main:app --host 127.0.0.1 --port 8010\""
+    "start:workerimageeditor": "cmd /c \"cd /d workers\\workerimageeditor && ..\\.venv\\Scripts\\python.exe -m uvicorn main:app --host 127.0.0.1 --port 8010\"",
+    "start:workerimagestudio": "cmd /c \"cd /d workers\\workerimagestudio && ..\\.venv\\Scripts\\python.exe -m uvicorn main:app --host 127.0.0.1 --port 8400\""
   },
   "devDependencies": {
     "concurrently": "^9.0.1"

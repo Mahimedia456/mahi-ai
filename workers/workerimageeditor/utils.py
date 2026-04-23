@@ -1,8 +1,15 @@
 import os
-import requests
 from io import BytesIO
-from PIL import Image
 from urllib.parse import quote
+
+import requests
+from PIL import Image
+from dotenv import load_dotenv
+from pathlib import Path
+
+ROOT_DIR = Path(__file__).resolve().parents[1]
+ENV_PATH = ROOT_DIR / ".env"
+load_dotenv(ENV_PATH, override=True)
 
 
 def download_image(url: str) -> Image.Image:
@@ -23,8 +30,14 @@ def resize_preview(image: Image.Image, max_size: int = 1024) -> Image.Image:
     return preview
 
 
-def upload_bytes_signed(upload_token: str, bucket: str, path: str, payload: bytes, content_type: str = "image/png"):
-    supabase_url = os.getenv("SUPABASE_URL")
+def upload_bytes_signed(
+    upload_token: str,
+    bucket: str,
+    path: str,
+    payload: bytes,
+    content_type: str = "image/png",
+):
+    supabase_url = os.getenv("SUPABASE_URL", "").strip()
     if not supabase_url:
         raise RuntimeError("SUPABASE_URL missing in python worker")
 

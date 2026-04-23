@@ -1,22 +1,15 @@
-const historyItems = [
-  {
-    prompt: "Cinematic cyberpunk street with fog and rain reflections",
-    status: "Completed",
-    date: "2 min ago",
-  },
-  {
-    prompt: "Editorial neon fashion portrait in black glass environment",
-    status: "Completed",
-    date: "1 hour ago",
-  },
-  {
-    prompt: "Architectural sci-fi hallway with ambient cyan light",
-    status: "Queued",
-    date: "Yesterday",
-  },
-];
+import { useEffect, useState } from "react";
+import { fetchImageStudioJobs } from "../../../api/imageStudio.api";
 
 export default function ImageStudioHistory() {
+  const [items, setItems] = useState([]);
+
+  useEffect(() => {
+    fetchImageStudioJobs({ limit: 20 })
+      .then((data) => setItems(data.items || []))
+      .catch(console.error);
+  }, []);
+
   return (
     <div className="min-h-[calc(100vh-64px)] p-8">
       <div className="mb-10">
@@ -29,18 +22,16 @@ export default function ImageStudioHistory() {
       </div>
 
       <div className="space-y-4">
-        {historyItems.map((item) => (
+        {items.map((item) => (
           <div
-            key={item.prompt}
+            key={item.id}
             className="border border-mahi-outlineVariant/25 bg-black/50 p-6 transition-all hover:border-mahi-accent/35"
           >
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
               <div>
-                <p className="theme-heading text-lg font-bold text-white">
-                  {item.prompt}
-                </p>
+                <p className="theme-heading text-lg font-bold text-white">{item.prompt}</p>
                 <p className="mt-2 text-[10px] uppercase tracking-[0.1em] text-white/28">
-                  Prompt Vector
+                  {item.style_key}
                 </p>
               </div>
 
@@ -48,12 +39,20 @@ export default function ImageStudioHistory() {
                 <p className="text-[10px] uppercase tracking-[0.2em] text-mahi-accent">
                   {item.status}
                 </p>
-                <p className="mt-2 text-sm text-white/35">{item.date}</p>
+                <p className="mt-2 text-sm text-white/35">
+                  {new Date(item.created_at).toLocaleString()}
+                </p>
               </div>
             </div>
           </div>
         ))}
       </div>
+
+      {!items.length ? (
+        <div className="mt-16 text-center text-sm text-white/40">
+          No history found.
+        </div>
+      ) : null}
     </div>
   );
 }

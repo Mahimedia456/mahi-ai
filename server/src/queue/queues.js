@@ -12,3 +12,7 @@ export const imageQueue = new Queue("image-jobs", {
 export const ingestQueue = new Queue("ingest-jobs", {
   connection: redisConnection,
 });
+
+export const imageStudioQueue = new Queue("image-studio", {
+  connection: redisConnection,
+});

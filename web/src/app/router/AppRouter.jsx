@@ -57,7 +57,7 @@ import ImageStudioResults from "../../features/imageStudio/pages/ImageStudioResu
 import ImageStudioAssets from "../../features/imageStudio/pages/ImageStudioAssets";
 import ImageStudioHistory from "../../features/imageStudio/pages/ImageStudioHistory";
 import ImageStudioPresets from "../../features/imageStudio/pages/ImageStudioPresets";
-
+import { ImageStudioProvider } from "../../features/imageStudio/context/ImageStudioContext";
 import ImageEditorHome from "../../features/imageStudio/pages/ImageEditorHome";
 import ImageEditorMagicTools from "../../features/imageStudio/pages/ImageEditorMagicTools";
 import ImageEditorGenerativeFill from "../../features/imageStudio/pages/ImageEditorGenerativeFill";
@@ -170,14 +170,21 @@ export default function AppRouter() {
           <Route path="media-library" element={<MediaLibraryPage />} />
         </Route>
 
-        <Route path="image-studio" element={<ImageStudioLayout />}>
-          <Route index element={<ImageStudioHome />} />
-          <Route path="generating" element={<ImageStudioGenerating />} />
-          <Route path="results" element={<ImageStudioResults />} />
-          <Route path="assets" element={<ImageStudioAssets />} />
-          <Route path="history" element={<ImageStudioHistory />} />
-          <Route path="presets" element={<ImageStudioPresets />} />
-        </Route>
+        <Route
+  path="image-studio"
+  element={
+    <ImageStudioProvider>
+      <ImageStudioLayout />
+    </ImageStudioProvider>
+  }
+>
+  <Route index element={<ImageStudioHome />} />
+  <Route path="generating" element={<ImageStudioGenerating />} />
+  <Route path="results" element={<ImageStudioResults />} />
+  <Route path="assets" element={<ImageStudioAssets />} />
+  <Route path="history" element={<ImageStudioHistory />} />
+  <Route path="presets" element={<ImageStudioPresets />} />
+</Route>
 
         <Route path="image-editor" element={<ImageEditorLayout />}>
           <Route index element={<Navigate to="home" replace />} />

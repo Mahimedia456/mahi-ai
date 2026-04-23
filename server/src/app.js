@@ -12,6 +12,7 @@ import chatRoutes from "./modules/chats/chat.routes.js";
 import aiRoutes from "./modules/ai/ai.routes.js";
 import projectRoutes from "./modules/projects/projects.routes.js";
 import imageEditorRoutes from "./modules/image-editor/imageEditor.routes.js";
+import imageStudioRoutes from "./modules/imageStudio/imageStudio.routes.js";
 
 import { errorMiddleware } from "./middlewares/error.middleware.js";
 
@@ -50,6 +51,7 @@ app.use("/api/chats", chatRoutes);
 app.use("/api/ai", aiRoutes);
 app.use("/api/projects", projectRoutes);
 app.use("/api/image-editor", imageEditorRoutes);
+app.use("/api/image-studio", imageStudioRoutes);
 
 app.use((req, res) => {
   res.status(404).json({

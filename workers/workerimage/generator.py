@@ -20,6 +20,7 @@ os.environ["HF_HUB_DISABLE_SYMLINKS_WARNING"] = "1"
 warnings.filterwarnings("ignore", message=".*position_ids.*")
 warnings.filterwarnings("ignore", message=".*requires torchvision.*")
 warnings.filterwarnings("ignore", message=".*cache-system uses symlinks by default.*")
+warnings.filterwarnings("ignore", message=".*Siglip2ImageProcessorFast.*")
 
 logging.getLogger("transformers").setLevel(logging.ERROR)
 logging.getLogger("diffusers").setLevel(logging.ERROR)

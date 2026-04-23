@@ -45,3 +45,8 @@ class Settings:
     REPLACE_BG_TIMEOUT = to_int(os.getenv("REPLACE_BG_TIMEOUT"), 600)
     REPLACE_BG_STEPS = to_int(os.getenv("REPLACE_BG_STEPS"), 10)
     REPLACE_BG_GUIDANCE = to_float(os.getenv("REPLACE_BG_GUIDANCE"), 5.5)
+
+    ADD_OBJECT_DEFAULT_STRENGTH = to_float(
+        os.getenv("ADD_OBJECT_DEFAULT_STRENGTH"),
+        0.9,
+    )

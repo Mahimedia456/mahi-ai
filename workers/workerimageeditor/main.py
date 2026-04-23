@@ -1,4 +1,12 @@
 import os
+import sys
+
+CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+WORKERS_DIR = os.path.dirname(CURRENT_DIR)
+
+if WORKERS_DIR not in sys.path:
+    sys.path.insert(0, WORKERS_DIR)
+
 os.environ["HF_HUB_DISABLE_SYMLINKS_WARNING"] = "1"
 
 from fastapi import FastAPI, HTTPException
@@ -16,6 +24,7 @@ from workerimageeditor.tools.upscale import upscale_image
 from workerimageeditor.tools.generative_fill import generative_fill
 from workerimageeditor.tools.replace_bg import replace_background
 from workerimageeditor.tools.erase_object import erase_object
+from workerimageeditor.tools.add_object import add_object
 from workerimageeditor.config import Settings
 
 app = FastAPI(title="Mahi AI Image Editor Worker")
@@ -51,6 +60,7 @@ def health():
         "device": Settings.DEVICE,
         "remove_bg_model": Settings.RMBG_MODEL,
         "inpaint_model": Settings.INPAINT_MODEL,
+        "add_object_default_strength": Settings.ADD_OBJECT_DEFAULT_STRENGTH,
     }
 
 
@@ -65,42 +75,50 @@ def edit_image(payload: EditRequest):
 
         elif payload.tool_type == "generative_fill":
             if not mask:
-                raise HTTPException(status_code=400, detail="mask_url required for generative_fill")
+                raise HTTPException(
+                    status_code=400,
+                    detail="mask_url required for generative_fill",
+                )
 
             result = generative_fill(
                 input_image=source,
                 mask_image=mask,
-                prompt=payload.prompt or "high quality realistic seamless fill",
+                prompt=payload.prompt or "clearly visible realistic edit in the masked area",
                 negative_prompt=payload.negative_prompt,
-                strength=payload.strength or 0.72,
+                strength=payload.strength or 0.9,
             )
 
         elif payload.tool_type == "replace_background":
             result = replace_background(
                 input_image=source,
                 mask_image=mask,
-                prompt=payload.prompt or "luxury outdoor garden area, cinematic premium portrait background, natural sunlight, high detail",
+                prompt=payload.prompt
+                or "luxury outdoor garden area, cinematic premium portrait background, natural sunlight, high detail",
                 negative_prompt=payload.negative_prompt,
                 strength=payload.strength or 0.75,
             )
 
         elif payload.tool_type == "add_object":
             if not mask:
-                raise HTTPException(status_code=400, detail="mask_url required for add_object")
+                raise HTTPException(
+                    status_code=400,
+                    detail="mask_url required for add_object",
+                )
 
-            result = generative_fill(
+            result = add_object(
                 input_image=source,
                 mask_image=mask,
-                prompt=payload.prompt or "realistic object inserted naturally with correct perspective, lighting, and shadows",
-                negative_prompt=payload.negative_prompt or (
-                    "distorted object, floating object, blur, duplicate, bad perspective, watermark, text"
-                ),
-                strength=payload.strength or 0.8,
+                prompt=payload.prompt,
+                negative_prompt=payload.negative_prompt,
+                strength=payload.strength or Settings.ADD_OBJECT_DEFAULT_STRENGTH,
             )
 
         elif payload.tool_type == "erase_element":
             if not mask:
-                raise HTTPException(status_code=400, detail="mask_url required for erase_element")
+                raise HTTPException(
+                    status_code=400,
+                    detail="mask_url required for erase_element",
+                )
 
             result = erase_object(
                 input_image=source,
@@ -133,7 +151,10 @@ def edit_image(payload: EditRequest):
             )
 
         else:
-            raise HTTPException(status_code=400, detail=f"Unsupported tool_type: {payload.tool_type}")
+            raise HTTPException(
+                status_code=400,
+                detail=f"Unsupported tool_type: {payload.tool_type}",
+            )
 
         output_png = image_to_png_bytes(result)
         preview_png = image_to_png_bytes(resize_preview(result, max_size=1024))
