@@ -1,8 +1,10 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Clapperboard, Zap } from "lucide-react";
+import { createVideoStudioJob } from "../../../api/videoStudio.api";
+import { buildVideoTitleFromPrompt } from "../../../utils/videoStudio";
 
-const durations = ["05.0s", "10.0s", "15.0s"];
+const durations = ["05.0s", "10.0s", "12.0s"];
 const formats = ["16:9", "9:16", "1:1", "4:5"];
 const manifests = [
   "CINEMATIC_ENGINE",
@@ -18,6 +20,50 @@ export default function VideoStudioHome() {
   const [format, setFormat] = useState("16:9");
   const [manifest, setManifest] = useState("CINEMATIC_ENGINE");
   const [prompt, setPrompt] = useState("");
+  const [motionStrength, setMotionStrength] = useState(50);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  async function handleGenerate() {
+    try {
+      setError("");
+
+      if (!prompt.trim()) {
+        setError("Prompt is required.");
+        return;
+      }
+
+      setLoading(true);
+
+      const payload = {
+        title: buildVideoTitleFromPrompt(prompt, "Text to Video"),
+        mode: "text_to_video",
+        prompt,
+        durationSeconds: Number(duration.replace("s", "")),
+        aspectRatio: format,
+        fps: 24,
+        resolution: "720p",
+        style: manifest,
+        motionStrength,
+        meta: {
+          source: "video_studio_home",
+        },
+      };
+
+      const response = await createVideoStudioJob(payload);
+      const job = response?.data;
+
+      if (!job?.id) {
+        throw new Error("Job was created but no job ID was returned.");
+      }
+
+      navigate(`/app/video-studio/generating?jobId=${job.id}`);
+    } catch (err) {
+      setError(err?.response?.data?.message || err.message || "Failed to create video job.");
+    } finally {
+      setLoading(false);
+    }
+  }
 
   return (
     <section className="flex h-[calc(100vh-144px)] overflow-hidden">
@@ -28,7 +74,7 @@ export default function VideoStudioHome() {
               <label className="text-[9px] font-bold uppercase tracking-[0.3em] text-mahi-accent/70">
                 Input Prompt
               </label>
-              <span className="font-mono text-[8px] text-white/20">ID: 4882-X</span>
+              <span className="font-mono text-[8px] text-white/20">TEXT_TO_VIDEO</span>
             </div>
 
             <textarea
@@ -37,6 +83,8 @@ export default function VideoStudioHome() {
               className="min-h-[140px] w-full resize-none border border-mahi-accent/20 bg-transparent p-4 text-xs text-white placeholder:text-white/20 outline-none transition-all focus:border-mahi-accent"
               placeholder="DESCRIBE_TARGET_SEQUENCE..."
             />
+
+            {error ? <p className="text-xs text-red-400">{error}</p> : null}
           </div>
 
           <div className="space-y-4">
@@ -120,7 +168,7 @@ export default function VideoStudioHome() {
                 Kinetic Flow
               </label>
               <span className="font-mono text-[9px] uppercase tracking-widest text-mahi-accent">
-                LEVEL_050
+                LEVEL_{String(motionStrength).padStart(3, "0")}
               </span>
             </div>
 
@@ -128,7 +176,8 @@ export default function VideoStudioHome() {
               type="range"
               min="0"
               max="100"
-              defaultValue="50"
+              value={motionStrength}
+              onChange={(e) => setMotionStrength(Number(e.target.value))}
               className="h-[1px] w-full cursor-pointer appearance-none bg-mahi-accent/20 accent-mahi-accent"
             />
 
@@ -141,11 +190,12 @@ export default function VideoStudioHome() {
           <div className="pt-6">
             <button
               type="button"
-              onClick={() => navigate("/app/video-studio/generating")}
-              className="group relative flex w-full items-center justify-center gap-3 overflow-hidden border border-mahi-accent bg-mahi-accent/5 py-4 text-[10px] font-bold uppercase tracking-[0.28em] text-mahi-accent transition-all hover:bg-mahi-accent hover:text-black"
+              onClick={handleGenerate}
+              disabled={loading}
+              className="group relative flex w-full items-center justify-center gap-3 overflow-hidden border border-mahi-accent bg-mahi-accent/5 py-4 text-[10px] font-bold uppercase tracking-[0.28em] text-mahi-accent transition-all hover:bg-mahi-accent hover:text-black disabled:cursor-not-allowed disabled:opacity-50"
             >
               <Zap size={15} />
-              <span>Initialize_Generation</span>
+              <span>{loading ? "Creating_Job..." : "Initialize_Generation"}</span>
             </button>
           </div>
         </div>
@@ -190,7 +240,7 @@ export default function VideoStudioHome() {
           <div className="mt-16 grid grid-cols-3 gap-20 text-center">
             <div>
               <span className="block font-['Space_Grotesk'] text-2xl font-bold tracking-[0.1em] text-white">
-                4K_UHD
+                720P
               </span>
               <span className="mt-2 block text-[8px] font-bold uppercase tracking-[0.3em] text-mahi-accent/40">
                 Output_Precision

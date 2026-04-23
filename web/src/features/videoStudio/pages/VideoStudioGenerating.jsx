@@ -1,10 +1,60 @@
-import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Loader2, Clapperboard } from "lucide-react";
+import { getVideoStudioJob } from "../../../api/videoStudio.api";
+import { getModeLabel } from "../../../utils/videoStudio";
 
 const frames = ["24%", "18%", "12%", "08%"];
 
 export default function VideoStudioGenerating() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const jobId = searchParams.get("jobId");
+
+  const [job, setJob] = useState(null);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let timer;
+
+    async function pollJob() {
+      try {
+        if (!jobId) {
+          setError("Missing job ID.");
+          setLoading(false);
+          return;
+        }
+
+        const response = await getVideoStudioJob(jobId);
+        const nextJob = response?.data;
+
+        setJob(nextJob);
+        setLoading(false);
+
+        if (nextJob?.status === "completed") {
+          navigate(`/app/video-studio/results?jobId=${jobId}`, { replace: true });
+          return;
+        }
+
+        if (nextJob?.status === "failed") {
+          setError(nextJob?.errorMessage || "Video generation failed.");
+          return;
+        }
+
+        timer = setTimeout(pollJob, 3000);
+      } catch (err) {
+        setError(err?.response?.data?.message || err.message || "Failed to fetch job.");
+        setLoading(false);
+      }
+    }
+
+    pollJob();
+
+    return () => {
+      if (timer) clearTimeout(timer);
+    };
+  }, [jobId, navigate]);
 
   return (
     <section className="flex h-[calc(100vh-144px)] overflow-hidden">
@@ -15,7 +65,7 @@ export default function VideoStudioGenerating() {
               Input
             </h1>
             <p className="mt-2 text-[10px] font-bold uppercase tracking-[0.22em] text-mahi-accent">
-              Processing Kernel...
+              {loading ? "Processing Kernel..." : `Status: ${job?.status || "unknown"}`}
             </p>
           </div>
 
@@ -25,9 +75,7 @@ export default function VideoStudioGenerating() {
                 Prompt Vector
               </label>
               <div className="font-mono text-sm leading-8 text-white/50">
-                A hyper-realistic cyberpunk street at night, heavy rain reflecting
-                neon cyan signs, cinematic anamorphic lens flares, ultra-detailed
-                textures, 8k resolution, volumetric fog.
+                {job?.prompt || job?.motionPrompt || "Waiting for prompt..."}
               </div>
             </div>
 
@@ -36,30 +84,41 @@ export default function VideoStudioGenerating() {
                 <label className="mb-2 block text-[10px] font-bold uppercase tracking-[0.28em] text-white/35">
                   Duration
                 </label>
-                <div className="theme-heading text-xl font-bold text-white">10.0s</div>
+                <div className="theme-heading text-xl font-bold text-white">
+                  {job?.durationSeconds ? `${job.durationSeconds}s` : "--"}
+                </div>
               </div>
               <div>
                 <label className="mb-2 block text-[10px] font-bold uppercase tracking-[0.28em] text-white/35">
                   Aspect
                 </label>
-                <div className="theme-heading text-xl font-bold text-white">16:9</div>
+                <div className="theme-heading text-xl font-bold text-white">
+                  {job?.aspectRatio || "--"}
+                </div>
               </div>
               <div>
                 <label className="mb-2 block text-[10px] font-bold uppercase tracking-[0.28em] text-white/35">
-                  Res
+                  Mode
                 </label>
-                <div className="theme-heading text-xl font-bold text-white">U-4K</div>
+                <div className="theme-heading text-base font-bold text-white">
+                  {job?.mode ? getModeLabel(job.mode) : "--"}
+                </div>
               </div>
             </div>
 
-            <button
-              type="button"
-              onClick={() => navigate("/app/video-studio/results")}
-              className="flex w-full items-center justify-center gap-4 border border-mahi-outlineVariant/40 py-4 text-[11px] font-bold uppercase tracking-[0.28em] text-mahi-accent"
-            >
-              <Loader2 size={16} className="animate-spin" />
-              Rendering Frames
-            </button>
+            {error ? (
+              <div className="rounded border border-red-400/30 bg-red-400/10 p-4 text-sm text-red-300">
+                {error}
+              </div>
+            ) : (
+              <button
+                type="button"
+                className="flex w-full items-center justify-center gap-4 border border-mahi-outlineVariant/40 py-4 text-[11px] font-bold uppercase tracking-[0.28em] text-mahi-accent"
+              >
+                <Loader2 size={16} className="animate-spin" />
+                {job?.status === "queued" ? "Queued For Generation" : "Rendering Frames"}
+              </button>
+            )}
           </div>
         </div>
       </aside>
@@ -76,16 +135,20 @@ export default function VideoStudioGenerating() {
                   <div className="h-full animate-[shimmer_2s_infinite_linear] bg-[linear-gradient(90deg,transparent,#53f5e7,transparent)] bg-[length:200%_100%]" />
                 </div>
                 <p className="text-[11px] font-bold uppercase tracking-[0.28em] text-mahi-accent">
-                  Synthesizing visual data...
+                  {job?.status === "queued"
+                    ? "Queued in render pipeline..."
+                    : "Synthesizing visual data..."}
                 </p>
               </div>
             </div>
 
             <div className="text-right">
               <div className="text-[9px] uppercase tracking-[0.28em] text-white/35">
-                Estimated Sync
+                Current Job
               </div>
-              <div className="theme-heading text-4xl font-bold text-white">14.00s</div>
+              <div className="theme-heading text-2xl font-bold text-white">
+                {jobId ? jobId.slice(0, 8) : "--"}
+              </div>
             </div>
           </div>
 
@@ -95,7 +158,13 @@ export default function VideoStudioGenerating() {
                 key={item}
                 className="relative aspect-video bg-black flex flex-col items-center justify-center"
               >
-                <div className="absolute inset-0 opacity-[0.04]" style={{ backgroundImage: "radial-gradient(circle, #53f5e7 1px, transparent 1px)", backgroundSize: "28px 28px" }} />
+                <div
+                  className="absolute inset-0 opacity-[0.04]"
+                  style={{
+                    backgroundImage: "radial-gradient(circle, #53f5e7 1px, transparent 1px)",
+                    backgroundSize: "28px 28px",
+                  }}
+                />
                 <div className="relative flex flex-col items-center gap-6">
                   <div className="relative flex h-16 w-16 items-center justify-center border border-mahi-accent/20">
                     <div className="absolute inset-0 rounded-full border-t-2 border-mahi-accent animate-spin" />
@@ -120,7 +189,9 @@ export default function VideoStudioGenerating() {
                 Render Note
               </h4>
               <p className="mt-2 font-mono text-[11px] leading-7 text-white/45">
-                // Motion interpolation is active. Frame coherence and cinematic blur are being resolved before export.
+                {job?.status === "queued"
+                  ? "// Job is queued and waiting for worker pickup."
+                  : "// Motion interpolation is active. Frame coherence and cinematic blur are being resolved before export."}
               </p>
             </div>
           </div>

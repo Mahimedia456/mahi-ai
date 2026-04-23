@@ -1,21 +1,123 @@
+import { useEffect, useState } from "react";
 import { Download, Save, RotateCcw, Wand2, FolderOpen } from "lucide-react";
-
-const archiveFrames = [
-  "https://images.unsplash.com/photo-1485846234645-a62644f84728?auto=format&fit=crop&w=800&q=80",
-  "https://images.unsplash.com/photo-1516724562728-afc824a36e84?auto=format&fit=crop&w=800&q=80",
-  "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=800&q=80",
-];
+import { useNavigate, useSearchParams } from "react-router-dom";
+import {
+  getVideoStudioJob,
+  getVideoStudioJobs,
+  saveVideoStudioAsset,
+} from "../../../api/videoStudio.api";
 
 export default function VideoStudioResults() {
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const jobId = searchParams.get("jobId");
+
+  const [job, setJob] = useState(null);
+  const [historyItems, setHistoryItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    async function loadData() {
+      try {
+        setLoading(true);
+        setError("");
+
+        const [jobRes, historyRes] = await Promise.all([
+          getVideoStudioJob(jobId),
+          getVideoStudioJobs({ page: 1, limit: 6 }),
+        ]);
+
+        setJob(jobRes?.data || null);
+        setHistoryItems(historyRes?.data || []);
+      } catch (err) {
+        setError(err?.response?.data?.message || err.message || "Failed to load result.");
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    if (jobId) {
+      loadData();
+    } else {
+      setError("Missing job ID.");
+      setLoading(false);
+    }
+  }, [jobId]);
+
+  async function handleSaveToLibrary() {
+    try {
+      if (!job?.outputVideoPath) return;
+
+      setSaving(true);
+      await saveVideoStudioAsset({
+        jobId: job.id,
+        assetType: "output_video",
+        title: job.title || "Saved video",
+        storagePath: job.outputVideoPath,
+        publicUrl: job.outputVideoUrl,
+        mimeType: "video/mp4",
+        fileSizeBytes: job.fileSizeBytes,
+        durationMs: job.durationMs,
+        fps: job.fps,
+        isLibraryItem: true,
+        tags: [job.mode, job.style].filter(Boolean),
+        meta: {
+          source: "video_studio_results_save",
+        },
+      });
+
+      alert("Saved to library successfully.");
+    } catch (err) {
+      alert(err?.response?.data?.message || err.message || "Failed to save to library.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function handleDownload() {
+    if (!job?.outputVideoUrl) {
+      alert("Output video URL is not available yet.");
+      return;
+    }
+
+    window.open(job.outputVideoUrl, "_blank");
+  }
+
+  function handleRegenerate() {
+    navigate("/app/video-studio");
+  }
+
+  if (loading) {
+    return (
+      <section className="flex min-h-[calc(100vh-144px)] items-center justify-center p-8 text-white/60">
+        Loading result...
+      </section>
+    );
+  }
+
   return (
     <section className="flex min-h-[calc(100vh-144px)] flex-col gap-10 p-8 xl:flex-row">
       <div className="min-w-0 flex-1 space-y-10">
         <div className="overflow-hidden border border-mahi-accent/30">
-          <img
-            src="https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=1400&q=80"
-            alt="Video preview"
-            className="aspect-video w-full object-cover"
-          />
+          {job?.outputVideoUrl ? (
+            <video
+              src={job.outputVideoUrl}
+              controls
+              className="aspect-video w-full bg-black object-cover"
+            />
+          ) : job?.previewImageUrl || job?.thumbnailUrl ? (
+            <img
+              src={job.previewImageUrl || job.thumbnailUrl}
+              alt="Video preview"
+              className="aspect-video w-full object-cover"
+            />
+          ) : (
+            <div className="flex aspect-video w-full items-center justify-center bg-black text-white/35">
+              No preview available yet
+            </div>
+          )}
         </div>
 
         <div>
@@ -23,25 +125,36 @@ export default function VideoStudioResults() {
             <h3 className="text-[10px] font-bold uppercase tracking-[0.32em] text-white/35">
               Archive_History
             </h3>
-            <button className="text-[10px] font-bold uppercase tracking-[0.22em] text-mahi-accent">
+            <button
+              onClick={() => navigate("/app/video-studio/history")}
+              className="text-[10px] font-bold uppercase tracking-[0.22em] text-mahi-accent"
+            >
               Browse All
             </button>
           </div>
 
-          <div className="flex gap-6 overflow-hidden">
-            {archiveFrames.map((src, index) => (
-              <div
-                key={src}
-                className={`h-28 w-48 shrink-0 overflow-hidden border ${
-                  index === 0 ? "border-mahi-accent" : "border-mahi-outlineVariant/20"
+          <div className="flex gap-6 overflow-x-auto">
+            {historyItems.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => navigate(`/app/video-studio/results?jobId=${item.id}`)}
+                className={`h-28 w-48 shrink-0 overflow-hidden border text-left ${
+                  item.id === job?.id ? "border-mahi-accent" : "border-mahi-outlineVariant/20"
                 }`}
               >
-                <img
-                  src={src}
-                  alt={`Archive ${index + 1}`}
-                  className="h-full w-full object-cover grayscale"
-                />
-              </div>
+                {item.thumbnailUrl || item.previewImageUrl ? (
+                  <img
+                    src={item.thumbnailUrl || item.previewImageUrl}
+                    alt={item.title || "History preview"}
+                    className="h-full w-full object-cover grayscale"
+                  />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center bg-black text-xs text-white/30">
+                    {item.title || "Video"}
+                  </div>
+                )}
+              </button>
             ))}
           </div>
         </div>
@@ -54,17 +167,15 @@ export default function VideoStudioResults() {
               Input_Prompt
             </h4>
             <p className="mt-6 text-sm italic leading-9 text-white/88">
-              "A CYBERNETIC STREET AT NIGHT, HEAVY RAIN REFLECTING NEON CYAN
-              SIGNS, CINEMATIC ANAMORPHIC LENS FLARES, ULTRA-DETAILED TEXTURES,
-              8K RESOLUTION, VOLUMETRIC FOG."
+              "{job?.prompt || job?.motionPrompt || "No prompt available"}"
             </p>
           </div>
 
           <div className="mb-8 grid grid-cols-3 gap-px border border-mahi-accent/20 bg-mahi-accent/10">
             {[
-              { label: "DUR", value: "10.0S" },
-              { label: "ASPECT", value: "16:9" },
-              { label: "RES", value: "U-4K" },
+              { label: "DUR", value: job?.durationSeconds ? `${job.durationSeconds}S` : "--" },
+              { label: "ASPECT", value: job?.aspectRatio || "--" },
+              { label: "FPS", value: job?.fps || "--" },
             ].map((item) => (
               <div key={item.label} className="bg-black px-4 py-4 text-center">
                 <div className="text-[8px] uppercase tracking-[0.24em] text-white/28">
@@ -77,24 +188,40 @@ export default function VideoStudioResults() {
             ))}
           </div>
 
+          {error ? <p className="mb-4 text-sm text-red-400">{error}</p> : null}
+
           <div className="space-y-4">
-            <button className="flex w-full items-center justify-center gap-3 bg-mahi-accent px-6 py-5 text-[10px] font-bold uppercase tracking-[0.28em] text-black">
+            <button
+              onClick={handleDownload}
+              className="flex w-full items-center justify-center gap-3 bg-mahi-accent px-6 py-5 text-[10px] font-bold uppercase tracking-[0.28em] text-black"
+            >
               <Download size={15} />
               Execute_Download
             </button>
 
             <div className="grid grid-cols-2 gap-4">
-              <button className="flex items-center justify-center gap-2 border border-mahi-accent/30 py-4 text-[10px] font-bold uppercase tracking-[0.22em] text-mahi-accent">
+              <button
+                onClick={handleSaveToLibrary}
+                disabled={saving}
+                className="flex items-center justify-center gap-2 border border-mahi-accent/30 py-4 text-[10px] font-bold uppercase tracking-[0.22em] text-mahi-accent disabled:opacity-50"
+              >
                 <FolderOpen size={14} />
-                Save
+                {saving ? "Saving" : "Save"}
               </button>
-              <button className="flex items-center justify-center gap-2 border border-mahi-accent/30 py-4 text-[10px] font-bold uppercase tracking-[0.22em] text-mahi-accent">
+
+              <button
+                onClick={() => navigate("/app/video-studio/library")}
+                className="flex items-center justify-center gap-2 border border-mahi-accent/30 py-4 text-[10px] font-bold uppercase tracking-[0.22em] text-mahi-accent"
+              >
                 <Wand2 size={14} />
-                V_Opt
+                Library
               </button>
             </div>
 
-            <button className="flex w-full items-center justify-center gap-3 border border-mahi-outlineVariant/25 py-4 text-[10px] font-bold uppercase tracking-[0.22em] text-white/30">
+            <button
+              onClick={handleRegenerate}
+              className="flex w-full items-center justify-center gap-3 border border-mahi-outlineVariant/25 py-4 text-[10px] font-bold uppercase tracking-[0.22em] text-white/30"
+            >
               <RotateCcw size={14} />
               Re_Generate
             </button>
@@ -107,7 +234,7 @@ export default function VideoStudioResults() {
               Engine_Core
             </h4>
             <div className="border border-mahi-accent px-3 py-1 text-[9px] font-bold uppercase tracking-[0.2em] text-mahi-accent">
-              v.3.5_PRO
+              {job?.modelKey || "LOCAL_STUB"}
             </div>
           </div>
 
@@ -117,10 +244,12 @@ export default function VideoStudioResults() {
             </div>
             <div>
               <div className="theme-heading text-lg font-bold text-white">
-                MAHI-DIFFUSION_ULTRA
+                {job?.style || "DEFAULT_VIDEO_ENGINE"}
               </div>
               <div className="mt-2 text-[10px] uppercase tracking-[0.18em] text-white/30">
-                CINEMATIC REALISM OPTIMIZED
+                {job?.mode === "frame_to_video"
+                  ? "FRAME ANIMATION PIPELINE"
+                  : "TEXT TO VIDEO PIPELINE"}
               </div>
             </div>
           </div>

@@ -13,7 +13,7 @@ import aiRoutes from "./modules/ai/ai.routes.js";
 import projectRoutes from "./modules/projects/projects.routes.js";
 import imageEditorRoutes from "./modules/image-editor/imageEditor.routes.js";
 import imageStudioRoutes from "./modules/imageStudio/imageStudio.routes.js";
-
+import videoStudioRoutes from "./modules/videoStudio/videoStudio.routes.js";
 import { errorMiddleware } from "./middlewares/error.middleware.js";
 
 const app = express();
@@ -52,6 +52,7 @@ app.use("/api/ai", aiRoutes);
 app.use("/api/projects", projectRoutes);
 app.use("/api/image-editor", imageEditorRoutes);
 app.use("/api/image-studio", imageStudioRoutes);
+app.use("/api/video-studio", videoStudioRoutes);
 
 app.use((req, res) => {
   res.status(404).json({

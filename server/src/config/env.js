@@ -58,6 +58,8 @@ export const env = {
   redisPort: toNumber(process.env.REDIS_PORT, 6379),
   redisPassword: process.env.REDIS_PASSWORD || "",
 
+  aiProvider: process.env.AI_PROVIDER || "self_hosted",
+
   ollamaBaseUrl: process.env.OLLAMA_URL || "http://127.0.0.1:11434",
   ollamaChatModel: process.env.OLLAMA_CHAT_MODEL || "phi3:mini",
   ollamaCodeModel: process.env.OLLAMA_CODE_MODEL || "qwen2.5-coder:7b",
@@ -79,6 +81,21 @@ export const env = {
     process.env.PYTHON_IMAGE_EDITOR_URL || "http://127.0.0.1:8010",
   imageStudioWorkerUrl:
     process.env.IMAGE_STUDIO_WORKER_URL || "http://127.0.0.1:8400",
+
+  videoStudioWorkerUrl:
+    process.env.VIDEO_STUDIO_WORKER_URL || "http://127.0.0.1:8500",
+  videoStudioWorkerTimeoutMs: toNumber(
+    process.env.VIDEO_STUDIO_WORKER_TIMEOUT_MS,
+    1200000
+  ),
+  videoStudioWorkerConcurrency: toNumber(
+    process.env.VIDEO_STUDIO_WORKER_CONCURRENCY,
+    1
+  ),
+  videoUploadSignedUrlTtl: toNumber(
+    process.env.VIDEO_UPLOAD_SIGNED_URL_TTL,
+    600
+  ),
 
   serperApiKey: process.env.SERPER_API_KEY || "",
   maxSearchResults: toNumber(process.env.MAX_SEARCH_RESULTS, 2),

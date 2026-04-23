@@ -3,6 +3,7 @@ import { env } from "./config/env.js";
 import { testDatabaseConnection } from "./config/db.js";
 import { startImageEditorWorker } from "./workers/imageEditor.worker.js";
 import { startImageStudioWorker } from "./workers/imageStudio.worker.js";
+import { startVideoStudioWorker } from "./workers/videoStudio.worker.js";
 
 async function startServer() {
   try {
@@ -10,6 +11,7 @@ async function startServer() {
 
     startImageEditorWorker();
     startImageStudioWorker();
+    startVideoStudioWorker();
 
     app.listen(env.port, () => {
       console.log("========================================");
@@ -19,6 +21,7 @@ async function startServer() {
       console.log(`🖥 Frontend Allowed Origin: ${env.appUrl}`);
       console.log(`🧠 Python Image Editor: ${env.pythonImageEditorUrl}`);
       console.log(`🖼 Image Studio Worker: ${env.imageStudioWorkerUrl}`);
+      console.log(`🎬 Video Studio Worker: ${env.videoStudioWorkerUrl}`);
       console.log("========================================");
     });
   } catch (error) {
